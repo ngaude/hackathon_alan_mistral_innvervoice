@@ -1,25 +1,19 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { PHASE_LABELS } from '../constants/phases';
 import { theme } from '../constants/theme';
 import type { Phase } from '../types/session';
 
-const STEPS: { phase: Phase; label: string }[] = [
-  { phase: 'ANCHORING', label: 'Anchor' },
-  { phase: 'EXPLORATION', label: 'Explore' },
-  { phase: 'ANALYSIS', label: 'Analysis' },
-  { phase: 'INNERVOICE', label: 'InnerVoice' },
-  { phase: 'FEEDBACK', label: 'Feedback' },
-  { phase: 'CLOSING', label: 'Closing' },
-];
+/** Étapes affichées (mêmes libellés que le badge de phase via `PHASE_LABELS`). */
+const PROGRESS_PHASES: Phase[] = ['SHARING', 'ANALYSIS', 'INNERVOICE', 'FEEDBACK', 'CLOSING'];
 
 const PHASE_TO_INDEX: Partial<Record<Phase, number>> = {
   ONBOARDING: -1,
-  ANCHORING: 0,
-  EXPLORATION: 1,
-  ANALYSIS: 2,
-  INNERVOICE: 3,
-  FEEDBACK: 4,
-  CLOSING: 5,
+  SHARING: 0,
+  ANALYSIS: 1,
+  INNERVOICE: 2,
+  FEEDBACK: 3,
+  CLOSING: 4,
 };
 
 interface Props {
@@ -31,7 +25,7 @@ export function SessionProgressBar({ phase, onDark }: Props) {
   const activeIdx = PHASE_TO_INDEX[phase] ?? -1;
 
   const items: React.ReactNode[] = [];
-  for (let i = 0; i < STEPS.length; i++) {
+  for (let i = 0; i < PROGRESS_PHASES.length; i++) {
     const done = i < activeIdx;
     const active = i === activeIdx;
 
@@ -66,12 +60,12 @@ export function SessionProgressBar({ phase, onDark }: Props) {
     <View style={styles.root}>
       <View style={styles.track}>{items}</View>
       <View style={styles.labelsRow}>
-        {STEPS.map((step, i) => {
+        {PROGRESS_PHASES.map((stepPhase, i) => {
           const done = i < activeIdx;
           const active = i === activeIdx;
           return (
             <Text
-              key={step.phase}
+              key={stepPhase}
               style={[
                 styles.label,
                 done && styles.labelDone,
@@ -80,7 +74,7 @@ export function SessionProgressBar({ phase, onDark }: Props) {
               ]}
               numberOfLines={1}
             >
-              {step.label}
+              {PHASE_LABELS[stepPhase]}
             </Text>
           );
         })}

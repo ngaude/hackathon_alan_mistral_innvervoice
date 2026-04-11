@@ -32,7 +32,7 @@ export default function VoiceCaptureScreen() {
       return;
     }
     setOnboardingDone(true);
-    setPhase('ANCHORING');
+    setPhase('SHARING');
     hapticSuccess();
     router.back();
   }
@@ -118,7 +118,7 @@ export default function VoiceCaptureScreen() {
         onPress={() => {
           hapticLight();
           setOnboardingDone(true);
-          setPhase('ANCHORING');
+          setPhase('SHARING');
           router.back();
         }}
         disabled={busy}

@@ -37,11 +37,10 @@ export interface AudioPart {
   kind?: 'user' | 'agent' | 'innervoice';
 }
 
-const MAX_EXPLORATION_USER_TURNS = 3;
+const MAX_SHARING_USER_FOLLOWUPS = 3;
 
 export type ClientEvent =
-  | { type: 'ANCHOR_SUBMIT'; mood: number; transcript: string }
-  | { type: 'EXPLORATION_MESSAGE'; text: string; mood0to10?: number }
+  | { type: 'SHARING_MESSAGE'; text: string; mood0to10?: number }
   | { type: 'ANALYSIS_MESSAGE'; text: string; mood0to10?: number }
   | { type: 'START_INNERVOICE'; consent?: boolean }
   | { type: 'COMPLETE_INNERVOICE' }
@@ -96,7 +95,7 @@ export function createInitialSession(
   userMistralVoiceId: string | null
 ): SessionSnapshot {
   return {
-    phase: 'ANCHORING',
+    phase: 'SHARING',
     voiceMode: 'AGENT',
     voiceProfileBase64,
     userMistralVoiceId,
@@ -125,11 +124,8 @@ export async function applyEvent(
     throw new Error('Session paused after crisis');
   }
 
-  if (event.type === 'ANCHOR_SUBMIT') {
-    return handleAnchor(state, event.mood, event.transcript.trim());
-  }
-  if (event.type === 'EXPLORATION_MESSAGE') {
-    return handleExplorationMessage(state, event.text.trim(), event.mood0to10);
+  if (event.type === 'SHARING_MESSAGE') {
+    return handleSharingMessage(state, event.text.trim(), event.mood0to10);
   }
   if (event.type === 'ANALYSIS_MESSAGE') {
     return handleAnalysisMessage(state, event.text.trim(), event.mood0to10);
@@ -146,22 +142,38 @@ export async function applyEvent(
   throw new Error('Unknown event');
 }
 
-async function handleAnchor(
+async function handleSharingMessage(
+  state: SessionSnapshot,
+  text: string,
+  mood0to10?: number
+): Promise<{ state: SessionSnapshot; audio: AudioPart[]; crisisMessage?: string }> {
+  if (state.phase !== 'SHARING') {
+    throw new Error('Invalid phase for SHARING_MESSAGE');
+  }
+  if (!text) throw new Error('Empty message');
+
+  if (state.emotionalState == null) {
+    if (mood0to10 === undefined) {
+      throw new Error('mood0to10 required for the first sharing message');
+    }
+    const mood = Math.min(10, Math.max(0, Math.round(mood0to10)));
+    return sharingSubmitFirst(state, mood, text);
+  }
+
+  return sharingSubmitFollowUp(state, text, mood0to10);
+}
+
+async function sharingSubmitFirst(
   state: SessionSnapshot,
   moodRaw: number,
   transcript: string
 ): Promise<{ state: SessionSnapshot; audio: AudioPart[]; crisisMessage?: string }> {
-  if (state.phase !== 'ANCHORING') {
-    throw new Error('Invalid phase for ANCHOR_SUBMIT');
-  }
-  if (!transcript) throw new Error('Empty transcript');
-
   if (detectCrisis(transcript)) {
     return {
       state: {
         ...state,
         crisisTriggered: true,
-        turns: [...state.turns, newTurn('user', transcript, 'ANCHORING', state.voiceMode)],
+        turns: [...state.turns, newTurn('user', transcript, 'SHARING', state.voiceMode)],
       },
       audio: [],
       crisisMessage: crisisUserMessage(),
@@ -172,9 +184,9 @@ async function handleAnchor(
   const tAnchor = performance.now();
   let t = tAnchor;
   const emotional = await analyzeEmotion(transcript, { selfReportedMood0to10: mood });
-  perfMs('ANCHOR_SUBMIT', 'analyzeEmotion_llm', t);
+  perfMs('SHARING_MESSAGE', 'analyzeEmotion_llm', t);
   t = performance.now();
-  const userTurn = newTurn('user', transcript, 'ANCHORING', state.voiceMode);
+  const userTurn = newTurn('user', transcript, 'SHARING', state.voiceMode);
   let turns = [...state.turns, userTurn];
   const feedbackBefore = {
     tension: Math.max(1, Math.min(10, mood)),
@@ -196,18 +208,18 @@ async function handleAnchor(
     emotional,
     selfReportedMood0to10: mood,
   });
-  perfMs('ANCHOR_SUBMIT', 'exploration_opening_llm', t);
+  perfMs('SHARING_MESSAGE', 'exploration_opening_llm', t);
   t = performance.now();
 
-  const openTurn = newTurn('agent', explorationOpen, 'EXPLORATION', 'AGENT');
+  const openTurn = newTurn('agent', explorationOpen, 'SHARING', 'AGENT');
   turns = [...turns, openTurn];
 
   const audio: AudioPart[] = [];
   const openB64 = await synthesizeWithAgentVoice(explorationOpen);
-  perfMs('ANCHOR_SUBMIT', 'tts_exploration_open', t);
-  perfMs('ANCHOR_SUBMIT', 'server_processing_total', tAnchor);
+  perfMs('SHARING_MESSAGE', 'tts_sharing_open', t);
+  perfMs('SHARING_MESSAGE', 'server_processing_total', tAnchor);
   audio.push({
-    label: 'Exploration',
+    label: 'Sharing',
     base64: openB64,
     mimeType: 'audio/mpeg',
     spokenText: explorationOpen,
@@ -217,7 +229,7 @@ async function handleAnchor(
   return {
     state: {
       ...state,
-      phase: 'EXPLORATION',
+      phase: 'SHARING',
       voiceMode: 'AGENT',
       emotionalState: emotional,
       sessionContext,
@@ -230,15 +242,11 @@ async function handleAnchor(
   };
 }
 
-async function handleExplorationMessage(
+async function sharingSubmitFollowUp(
   state: SessionSnapshot,
   text: string,
   moodRaw?: number
 ): Promise<{ state: SessionSnapshot; audio: AudioPart[]; crisisMessage?: string }> {
-  if (state.phase !== 'EXPLORATION') {
-    throw new Error('Invalid phase for EXPLORATION_MESSAGE');
-  }
-  if (!text) throw new Error('Empty message');
   if (!state.emotionalState) throw new Error('Missing emotional state');
 
   if (detectCrisis(text)) {
@@ -246,7 +254,7 @@ async function handleExplorationMessage(
       state: {
         ...state,
         crisisTriggered: true,
-        turns: [...state.turns, newTurn('user', text, 'EXPLORATION', state.voiceMode)],
+        turns: [...state.turns, newTurn('user', text, 'SHARING', state.voiceMode)],
       },
       audio: [],
       crisisMessage: crisisUserMessage(),
@@ -258,7 +266,7 @@ async function handleExplorationMessage(
       ? Math.min(10, Math.max(0, Math.round(moodRaw)))
       : state.sessionContext.anchorMoodLive ?? state.anchorMood ?? undefined;
 
-  const userTurn = newTurn('user', text, 'EXPLORATION', 'AGENT');
+  const userTurn = newTurn('user', text, 'SHARING', state.voiceMode);
   let turns = [...state.turns, userTurn];
   const n = (state.sessionContext.explorationTurns ?? 0) + 1;
 
@@ -270,7 +278,7 @@ async function handleExplorationMessage(
 
   const summary = buildSummaryFromTurns(turns);
 
-  if (n < MAX_EXPLORATION_USER_TURNS) {
+  if (n < MAX_SHARING_USER_FOLLOWUPS) {
     const t0 = performance.now();
     const reply = await generateExplorationFollowUp({
       step: n === 1 ? 1 : 2,
@@ -279,8 +287,8 @@ async function handleExplorationMessage(
       emotional: state.emotionalState,
       selfReportedMood0to10: moodNudge,
     });
-    perfMs('EXPLORATION_MESSAGE', 'exploration_followup_llm', t0);
-    const agentTurn = newTurn('agent', reply, 'EXPLORATION', 'AGENT');
+    perfMs('SHARING_MESSAGE', 'exploration_followup_llm', t0);
+    const agentTurn = newTurn('agent', reply, 'SHARING', 'AGENT');
     turns = [...turns, agentTurn];
     const agentB64 = await synthesizeWithAgentVoice(reply);
     return {
@@ -291,7 +299,7 @@ async function handleExplorationMessage(
       },
       audio: [
         {
-          label: 'Exploration',
+          label: 'Sharing',
           base64: agentB64,
           mimeType: 'audio/mpeg',
           spokenText: reply,
@@ -303,7 +311,7 @@ async function handleExplorationMessage(
 
   const tClass = performance.now();
   const classified = await classifyCognitiveSession(summary);
-  perfMs('EXPLORATION_MESSAGE', 'classify_distortions_llm', tClass);
+  perfMs('SHARING_MESSAGE', 'classify_distortions_llm', tClass);
 
   const cognitiveDistortions = classified.distortions.map((x) => String(x));
   const beckTriangle = classified.beck_triangle;
@@ -316,15 +324,12 @@ async function handleExplorationMessage(
     summaryHint: summary,
     primaryDistortion,
   });
-  perfMs('EXPLORATION_MESSAGE', 'nudge_innervoice_llm', tNudge);
+  perfMs('SHARING_MESSAGE', 'nudge_innervoice_llm', tNudge);
 
-  const nudgeTurn = newTurn('agent', nudgeText, 'ANALYSIS', 'INNERVOICE');
+  const nudgeTurn = newTurn('agent', nudgeText, 'ANALYSIS', 'AGENT');
   turns = [...turns, nudgeTurn];
 
-  const nudgeB64 = await synthesizeInnervoiceUserTts(nudgeText, {
-    userMistralVoiceId: state.userMistralVoiceId,
-    voiceProfileBase64: state.voiceProfileBase64,
-  });
+  const nudgeB64 = await synthesizeWithAgentVoice(nudgeText);
 
   const distortionLine = classified.distortions
     .map((id) => COGNITIVE_DISTORTION_LABELS[id] ?? id)
@@ -338,7 +343,7 @@ async function handleExplorationMessage(
     brief: true,
     selfReportedMood0to10: moodNudge,
   });
-  perfMs('EXPLORATION_MESSAGE', 'generateAgentReply_analysis', tAnalysis);
+  perfMs('SHARING_MESSAGE', 'generateAgentReply_analysis', tAnalysis);
 
   const agentTurn = newTurn('agent', analysisAgentText, 'ANALYSIS', 'AGENT');
   turns = [...turns, agentTurn];
@@ -362,11 +367,11 @@ async function handleExplorationMessage(
     },
     audio: [
       {
-        label: 'Nudge InnerVoice',
+        label: 'Guide',
         base64: nudgeB64,
         mimeType: 'audio/mpeg',
         spokenText: nudgeText,
-        kind: 'innervoice',
+        kind: 'agent',
       },
       {
         label: 'Agent (analysis)',
