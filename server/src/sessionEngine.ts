@@ -11,7 +11,7 @@ import { generateInnervoiceNudgeText } from './innervoiceNudge.js';
 import {
   synthesizeInnervoiceUserTts,
   synthesizeWithAgentVoice,
-} from './mistralSpeech.js';
+} from './speechProvider.js';
 import {
   approximateTriangleFromLegacy,
   deriveLegacyScoresFromTriangle,

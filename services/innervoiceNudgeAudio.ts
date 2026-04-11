@@ -1,7 +1,7 @@
 import { mistralApiError } from '../lib/mistralDebug';
 import { INNERVOICE_NUDGE_TEXT } from '../constants/innervoiceNudge';
 import { playMp3Base64 } from './audioPlayer';
-import { synthesizeInnervoiceUserTts } from './mistralSpeech';
+import { synthesizeInnervoiceUserTts } from './speechProvider';
 
 /** Plays first-person nudge with user voice (clone / `voice_id`), or Jane neutral preset if no print / TTS 403. */
 export async function playInnervoiceNudgeAudio(params: {

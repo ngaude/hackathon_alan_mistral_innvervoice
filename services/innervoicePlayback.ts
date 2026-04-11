@@ -1,7 +1,7 @@
 import { INNERVOICE_PAUSE_MS_BETWEEN_SEGMENTS } from '../constants/voiceParams';
 import type { InnervoiceScript } from '../types/session';
 import { playMp3Base64 } from './audioPlayer';
-import { synthesizeInnervoiceUserTts, type InnervoiceUserTtsInput } from './mistralSpeech';
+import { synthesizeInnervoiceUserTts, type InnervoiceUserTtsInput } from './speechProvider';
 
 function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));

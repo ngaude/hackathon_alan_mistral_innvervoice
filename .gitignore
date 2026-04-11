@@ -12,6 +12,7 @@ dist/
 *.mobileprovision
 *.orig.*
 web-build/
+package-lock.json
 
 # SQLite + fichiers audio générés par le serveur de dev
 server/data/
