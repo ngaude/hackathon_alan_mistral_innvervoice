@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AnchorMoodSlider } from '../../components/AnchorMoodSlider';
+import { SessionChatThread } from '../../components/SessionChatThread';
 import { SessionFeedbackCard } from '../../components/SessionFeedbackCard';
 import { SessionProgressBar } from '../../components/SessionProgressBar';
 import { PlaybackCaptionBar } from '../../components/PlaybackCaptionBar';
@@ -45,6 +46,7 @@ export default function SessionScreen() {
   const lastError = useSessionStore((s) => s.lastError);
   const innervoiceSeg = useSessionStore((s) => s.innervoicePlayingSegment);
   const analysisAgentText = useSessionStore((s) => s.analysisAgentText);
+  const emotionalState = useSessionStore((s) => s.emotionalState);
   const anchorMood = useSessionStore((s) => s.anchorMood);
   const feedbackBeforeStore = useSessionStore((s) => s.feedbackBefore);
   const feedbackAfterStore = useSessionStore((s) => s.feedbackAfter);
@@ -82,7 +84,7 @@ export default function SessionScreen() {
     (v: number) => {
       const r = clampAnchorMood(v);
       setAnchorMoodSlider(r);
-      if (phase === 'ANCHORING' || phase === 'EXPLORATION' || phase === 'ANALYSIS') {
+      if (phase === 'SHARING' || phase === 'ANALYSIS') {
         patchSessionContext({ anchorMoodLive: r });
       }
     },
@@ -90,7 +92,7 @@ export default function SessionScreen() {
   );
 
   useEffect(() => {
-    if (phase === 'ANCHORING' && onboardingDone) {
+    if (phase === 'SHARING' && onboardingDone) {
       patchSessionContext({ anchorMoodLive: ANCHOR_MOOD_EQUILIBRIUM });
     }
   }, [phase, onboardingDone, patchSessionContext]);
@@ -100,7 +102,7 @@ export default function SessionScreen() {
   const anchorSpokenRef = useRef(false);
 
   useEffect(() => {
-    if (phase !== 'ANCHORING' || !remoteSessionId || anchorSpokenRef.current) return;
+    if (phase !== 'SHARING' || !remoteSessionId || anchorSpokenRef.current) return;
     const audio = welcomeAudioRef.current;
     if (!audio) return;
     anchorSpokenRef.current = true;
@@ -160,7 +162,7 @@ export default function SessionScreen() {
       setUserMistralVoiceId(serverProfile.mistralVoiceId);
       setVoiceProfile(null);
       setOnboardingDone(true);
-      setPhase('ANCHORING');
+      setPhase('SHARING');
     }
   }, [phase, onboardingDone, serverProfile, setUserMistralVoiceId, setVoiceProfile, setOnboardingDone, setPhase]);
 
@@ -235,10 +237,12 @@ export default function SessionScreen() {
     return buildSummaryFromTurns(turns);
   }, [sessionContext.summary, turns]);
 
-  const lastExplorationAgentText = useMemo(() => {
-    const t = [...turns].reverse().find((x) => x.role === 'agent' && x.phase === 'EXPLORATION');
-    return t?.text?.trim() ?? '';
-  }, [turns]);
+  const sharingChatTurns = useMemo(() => turns.filter((t) => t.phase === 'SHARING'), [turns]);
+
+  const analysisChatTurns = useMemo(
+    () => turns.filter((t) => t.phase === 'SHARING' || t.phase === 'ANALYSIS'),
+    [turns]
+  );
 
   const completeInnervoice = useCallback(async () => {
     if (!remoteSessionId) return;
@@ -288,7 +292,7 @@ export default function SessionScreen() {
     [applySnapshot, completeInnervoice, remoteSessionId, setCaption, setError, setLoading, setPhase]
   );
 
-  const submitExplorationText = useCallback(
+  const submitSharingVoice = useCallback(
     async (rawText: string) => {
       const text = rawText.trim();
       if (!text) {
@@ -299,7 +303,7 @@ export default function SessionScreen() {
         setError('Connecting to server… Try again in a moment.');
         return;
       }
-      if (phase !== 'EXPLORATION') {
+      if (phase !== 'SHARING') {
         setError('Unexpected step.');
         return;
       }
@@ -308,9 +312,13 @@ export default function SessionScreen() {
       setError(null);
       try {
         const mood = clampAnchorMood(anchorMoodSlider);
-        patchSessionContext({ anchorMoodLive: mood });
+        if (emotionalState == null) {
+          patchSessionContext({ anchorMoodLive: mood, explorationTurns: 0, summary: text });
+        } else {
+          patchSessionContext({ anchorMoodLive: mood });
+        }
         const { state, audio, crisisMessage } = await postSessionEvent(remoteSessionId, {
-          type: 'EXPLORATION_MESSAGE',
+          type: 'SHARING_MESSAGE',
           text,
           mood0to10: mood,
         });
@@ -333,65 +341,12 @@ export default function SessionScreen() {
     [
       anchorMoodSlider,
       applySnapshot,
+      emotionalState,
       patchSessionContext,
       phase,
       remoteSessionId,
       setCrisis,
       setCaption,
-      setError,
-      setLoading,
-    ]
-  );
-
-  const submitUserText = useCallback(
-    async (rawText: string) => {
-      const text = rawText.trim();
-      if (!text) {
-        setError('No speech recognized. Try again.');
-        return;
-      }
-      if (!remoteSessionId) {
-        setError('Connecting to server… Try again in a moment.');
-        return;
-      }
-      if (phase !== 'ANCHORING') {
-        setError('Unexpected step — return to anchoring.');
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
-      try {
-        const mood = clampAnchorMood(anchorMoodSlider);
-        patchSessionContext({ anchorMoodLive: mood, explorationTurns: 0, summary: text });
-        const { state, audio, crisisMessage } = await postSessionEvent(remoteSessionId, {
-          type: 'ANCHOR_SUBMIT',
-          mood,
-          transcript: text,
-        });
-        applySnapshot(state);
-        if (crisisMessage || state.crisisTriggered) {
-          setCrisis(true);
-          hapticLight();
-          return;
-        }
-        await playServerAudioParts(
-          audio.map((a) => ({ base64: a.base64, spokenText: a.spokenText })),
-          (t) => setCaption(t)
-        );
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Error');
-      } finally {
-        setLoading(false);
-      }
-    },
-    [
-      anchorMoodSlider,
-      applySnapshot,
-      patchSessionContext,
-      phase,
-      remoteSessionId,
-      setCrisis,
       setError,
       setLoading,
     ]
@@ -538,7 +493,7 @@ export default function SessionScreen() {
             onPress={() => {
               hapticLight();
               setOnboardingDone(true);
-              setPhase('ANCHORING');
+              setPhase('SHARING');
             }}
           >
             <Text style={styles.btnTextGhost}>Neutral voice</Text>
@@ -546,30 +501,38 @@ export default function SessionScreen() {
         </View>
       ) : null}
 
-      {phase === 'ANCHORING' && onboardingDone ? (
+      {phase === 'SHARING' && onboardingDone ? (
         <View style={styles.card}>
+          <Text style={styles.label}>Sharing</Text>
+          {sharingChatTurns.length === 0 && !emotionalState ? (
+            <Text style={styles.anchorQuestion}>{ANCHOR_WELCOME}</Text>
+          ) : null}
+          <SessionChatThread
+            turns={sharingChatTurns}
+            emptyHint={
+              emotionalState && sharingChatTurns.length === 0
+                ? 'Listening for the opening…'
+                : undefined
+            }
+            inverse={onDarkScreen}
+          />
           <AnchorMoodSlider
             value={anchorMoodSlider}
             onValueChange={onAnchorMoodChange}
             onSlidingComplete={hapticLight}
             disabled={loading}
-            variant="anchoring"
+            variant={emotionalState ? 'analysis' : 'anchoring'}
           />
-        </View>
-      ) : null}
-
-      {phase === 'EXPLORATION' && onboardingDone ? (
-        <View style={styles.card}>
-          <Text style={styles.label}>Exploration</Text>
-          <Text style={styles.body}>
-            {lastExplorationAgentText || 'Listening for the opening…'}
-          </Text>
           <VoiceSttControl
             disabled={loading || !remoteSessionId}
-            label="Reply in a few words."
+            label={
+              emotionalState
+                ? 'Reply in a few words — at most three turns after the welcome.'
+                : 'Speak freely about what is on your mind, then stop recording to send.'
+            }
             busyLabel="Transcribing…"
             onSttError={(m) => setError(m)}
-            onTranscript={(t) => submitExplorationText(t)}
+            onTranscript={(t) => submitSharingVoice(t)}
             transcribeFromUri={remoteSessionId ? transcribeFromUri : undefined}
           />
         </View>
@@ -577,7 +540,19 @@ export default function SessionScreen() {
 
       {phase === 'ANALYSIS' ? (
         <View style={styles.card}>
-          <Text style={styles.body}>{analysisAgentText || 'Building the focus…'}</Text>
+          <Text style={styles.label}>Discussion</Text>
+          {analysisChatTurns.length > 0 ? (
+            <SessionChatThread turns={analysisChatTurns} inverse={onDarkScreen} />
+          ) : (
+            <Text style={styles.body}>{analysisAgentText || 'Building the focus…'}</Text>
+          )}
+          <AnchorMoodSlider
+            value={anchorMoodSlider}
+            onValueChange={onAnchorMoodChange}
+            onSlidingComplete={hapticLight}
+            disabled={loading}
+            variant="analysis"
+          />
           {!loading ? (
             <Pressable
               style={({ pressed }) => [styles.btn, styles.btnPrimary, pressed && styles.btnPressed]}
@@ -660,19 +635,9 @@ export default function SessionScreen() {
       ) : null}
       {loading ? <ActivityIndicator color={theme.accentCyan} style={{ marginVertical: 12 }} /> : null}
 
-      {phase === 'ANCHORING' && onboardingDone ? (
-        <View style={styles.card}>
-          <Text style={styles.anchorQuestion}>{ANCHOR_WELCOME}</Text>
-          <VoiceSttControl
-            disabled={loading || !remoteSessionId}
-            busyLabel="Transcribing…"
-            onSttError={(m) => setError(m)}
-            onTranscript={(t) => submitUserText(t)}
-            transcribeFromUri={remoteSessionId ? transcribeFromUri : undefined}
-          />
-        </View>
+      {phase === 'INNERVOICE' && loading ? (
+        <Text style={[styles.body, onDarkScreen && styles.textMutedOnDark]}>Preparing / playing replay…</Text>
       ) : null}
-
     </ScrollView>
     <PlaybackCaptionBar caption={phase === 'ANALYSIS' || phase === 'INNERVOICE' || phase === 'FEEDBACK' || phase === 'CLOSING' ? null : caption} />
     </View>

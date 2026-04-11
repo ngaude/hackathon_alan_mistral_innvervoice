@@ -63,12 +63,11 @@ Typical length: **about 8–15 minutes** (exploration limited to **three** user 
 ## 3. Phases (conceptual)
 
 0. **ONBOARDING** — optional calm voice capture  
-1. **ANCHORING** — mood slider + spoken anchor  
-2. **EXPLORATION** — up to 3 user turns after the opening (“we”)  
-3. **ANALYSIS** — nudge (cloned voice) + agent framing  
-4. **INNERVOICE** — three-part replay (validation / reframing / intention)  
-5. **FEEDBACK** — sliders after listening  
-6. **CLOSING** — synthesis  
+1. **SHARING** — mood slider + anchor + “we” exploration (same step; up to 3 user replies after the opening)  
+2. **ANALYSIS** — nudge (cloned voice) + agent framing  
+3. **INNERVOICE** — three-part replay (validation / reframing / intention)  
+4. **FEEDBACK** — sliders after listening  
+5. **CLOSING** — synthesis  
 
 ---
 

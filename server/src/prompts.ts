@@ -8,7 +8,6 @@ Grammar (mandatory)
 
 Task: first message after anchoring (the person has already shared what is on their mind).
 - In 3–5 short sentences: briefly explain we’ll move forward together as “we,” like a guided journal (do not say “CBT” or “session”).
-- End with ONE main question inviting agreement to continue (yes / OK) — do not re-ask for full context; anchoring is enough.
 
 Keep it brief. No emoji, no markdown, no bullet lists. Warm, careful English.`;
 

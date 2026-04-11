@@ -4,8 +4,7 @@ import { theme } from '../constants/theme';
 import type { Phase } from '../types/session';
 
 const STEPS: { phase: Phase; label: string }[] = [
-  { phase: 'ANCHORING', label: 'Anchor' },
-  { phase: 'EXPLORATION', label: 'Explore' },
+  { phase: 'SHARING', label: 'Sharing' },
   { phase: 'ANALYSIS', label: 'Analysis' },
   { phase: 'INNERVOICE', label: 'InnerVoice' },
   { phase: 'FEEDBACK', label: 'Feedback' },
@@ -14,12 +13,11 @@ const STEPS: { phase: Phase; label: string }[] = [
 
 const PHASE_TO_INDEX: Partial<Record<Phase, number>> = {
   ONBOARDING: -1,
-  ANCHORING: 0,
-  EXPLORATION: 1,
-  ANALYSIS: 2,
-  INNERVOICE: 3,
-  FEEDBACK: 4,
-  CLOSING: 5,
+  SHARING: 0,
+  ANALYSIS: 1,
+  INNERVOICE: 2,
+  FEEDBACK: 3,
+  CLOSING: 4,
 };
 
 interface Props {
