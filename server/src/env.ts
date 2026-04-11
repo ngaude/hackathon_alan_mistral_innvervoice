@@ -1,7 +1,27 @@
-/** Variables d’environnement serveur (fichier `.env` à la racine `server/` ou export manuel). */
+/** Variables d'environnement serveur (fichier `.env` à la racine `server/` ou export manuel). */
+
+export type VoiceProviderType = 'mistral' | 'elevenlabs';
+
+export function getVoiceProvider(): VoiceProviderType {
+  const v = (process.env.VOICE_PROVIDER ?? '').trim().toLowerCase();
+  if (v === 'elevenlabs') return 'elevenlabs';
+  return 'mistral';
+}
 
 export function getMistralApiKey(): string {
   return (process.env.MISTRAL_API_KEY ?? '').trim();
+}
+
+export function getElevenlabsApiKey(): string {
+  return (process.env.ELEVENLABS_API_KEY ?? '').trim();
+}
+
+export function getElevenlabsModelId(): string {
+  return (process.env.ELEVENLABS_MODEL_ID ?? '').trim() || 'eleven_multilingual_v2';
+}
+
+export function getElevenlabsAgentVoiceId(): string {
+  return (process.env.ELEVENLABS_AGENT_VOICE_ID ?? '').trim() || '';
 }
 
 export function getMistralTtsModel(): string {

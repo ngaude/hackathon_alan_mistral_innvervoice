@@ -11,12 +11,12 @@ import cors from 'cors';
 import express from 'express';
 import { randomUUID } from 'node:crypto';
 
-import { getServerPort, getServerSecret, isPerfLogEnabled } from './env.js';
+import { getServerPort, getServerSecret, getVoiceProvider, isPerfLogEnabled } from './env.js';
 import { applyEvent, createInitialSession, type ClientEvent } from './sessionEngine.js';
 import type { SessionSnapshot } from './sessionTypes.js';
 import { convertCompressedBase64ToWavBase64, hasFfmpeg } from './convertRefAudioFfmpeg.js';
 import { normalizeRefAudioBase64 } from './refAudio.js';
-import { transcribeAudioBase64 } from './mistralTranscribe.js';
+import { transcribeAudioBase64 } from './sttProvider.js';
 import { b64Len, logError, logInfo, logWarn } from './log.js';
 import { getDb } from './db.js';
 import {
@@ -33,7 +33,7 @@ import {
   updateSessionSnapshot,
   upsertUser,
 } from './persistence.js';
-import { createMistralClonedVoice } from './mistralVoices.js';
+import { createClonedVoice } from './voiceCloneProvider.js';
 
 const sessions = new Map<string, SessionSnapshot>();
 /** sessionId → userId (persisté en base). */
@@ -67,8 +67,9 @@ app.use((req, res, next) => {
 
 app.get('/health', (_req, res) => {
   const ffmpeg = hasFfmpeg();
-  logInfo('health', { ffmpeg, sessions: sessions.size });
-  res.json({ ok: true, ffmpeg });
+  const voiceProvider = getVoiceProvider();
+  logInfo('health', { ffmpeg, voiceProvider, sessions: sessions.size });
+  res.json({ ok: true, ffmpeg, voiceProvider });
 });
 
 app.use((req, res, next) => {
@@ -153,7 +154,7 @@ app.post('/api/users/:userId/voice/clone', async (req, res) => {
   }
   logInfo('voice clone start', { userId, filename, sampleChars: sample.length });
   try {
-    const voiceId = await createMistralClonedVoice(sample, filename);
+    const voiceId = await createClonedVoice(sample, filename);
     setUserMistralVoice(userId, voiceId);
     logInfo('voice clone ok', { userId, voiceIdLen: voiceId.length });
     res.json({ mistralVoiceId: voiceId });
@@ -452,5 +453,6 @@ app.listen(port, () => {
   logInfo(`écoute http://localhost:${port}`, {
     auth: Boolean(getServerSecret()),
     ffmpeg: hasFfmpeg(),
+    voiceProvider: getVoiceProvider(),
   });
 });

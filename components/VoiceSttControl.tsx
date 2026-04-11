@@ -4,7 +4,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { theme } from '../constants/theme';
 import { useRecorder } from '../hooks/useRecorder';
 import { hapticHeavy, hapticLight, hapticMedium, hapticSuccess, hapticWarning } from '../lib/haptics';
-import { transcribeAudioFromUri } from '../services/mistralTranscribe';
+import { transcribeAudioFromUri } from '../services/sttProvider';
 
 type Props = {
   onTranscript: (text: string) => void | Promise<void>;

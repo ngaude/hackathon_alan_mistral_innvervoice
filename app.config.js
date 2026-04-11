@@ -87,14 +87,16 @@ module.exports = {
     },
     extra: {
       router: { origin: false },
+      voiceProvider: process.env.VOICE_PROVIDER ?? 'mistral',
       mistralApiKey: process.env.MISTRAL_API_KEY ?? '',
       mistralAgentVoiceId: process.env.MISTRAL_AGENT_VOICE_ID ?? '',
-      /** Default neutral agent voice slug (API: e.g. `gb_jane_neutral`, not alias `marie`) */
       mistralDefaultAgentVoiceId: process.env.MISTRAL_DEFAULT_AGENT_VOICE_ID ?? 'gb_jane_neutral',
-      /** Mistral voice slug for simulated user without a print / TTS fallback */
       mistralInnervoiceSimulatedVoiceId: process.env.MISTRAL_INNERVOICE_SIMULATED_VOICE_ID ?? 'gb_jane_neutral',
       mistralTtsModel: process.env.MISTRAL_TTS_MODEL ?? '',
       mistralSttModel: process.env.MISTRAL_STT_MODEL ?? '',
+      elevenlabsApiKey: process.env.ELEVENLABS_API_KEY ?? '',
+      elevenlabsModelId: process.env.ELEVENLABS_MODEL_ID ?? 'eleven_multilingual_v2',
+      elevenlabsAgentVoiceId: process.env.ELEVENLABS_AGENT_VOICE_ID ?? '',
       debugMistral: process.env.EXPO_PUBLIC_DEBUG_MISTRAL === '1',
       refAudioConvertUrl: process.env.EXPO_PUBLIC_REF_AUDIO_CONVERT_URL ?? '',
       refAudioConvertSecret: process.env.EXPO_PUBLIC_REF_AUDIO_CONVERT_SECRET ?? '',

@@ -2,7 +2,7 @@ import * as Speech from 'expo-speech';
 import { AGENT_VOICE_VOLUME } from '../constants/audioPlayback';
 import { mistralApiError } from '../lib/mistralDebug';
 import { sanitizeSpokenText } from '../lib/sanitizeSpokenText';
-import { synthesizeWithAgentVoice } from './mistralSpeech';
+import { synthesizeWithAgentVoice } from './speechProvider';
 import { playMp3Base64 } from './audioPlayer';
 
 /** Agent voice (Jane / neutral) — lower volume vs cloned InnerVoice. */
