@@ -9,6 +9,8 @@ import { transcribeAudioFromUri } from '../services/sttProvider';
 type Props = {
   onTranscript: (text: string) => void | Promise<void>;
   onSttError?: (message: string) => void;
+  /** Appelé une fois l’enregistrement démarré (après « Tap to speak »). */
+  onBeginRecording?: () => void;
   disabled?: boolean;
   label?: string;
   /** Court pour limiter la taille des requêtes STT */
@@ -20,6 +22,7 @@ type Props = {
 export function VoiceSttControl({
   onTranscript,
   onSttError,
+  onBeginRecording,
   disabled,
   label,
   busyLabel,
@@ -38,6 +41,7 @@ export function VoiceSttControl({
       if (!isRecording) {
         hapticMedium();
         await start();
+        onBeginRecording?.();
         hapticHeavy();
       } else {
         hapticMedium();
@@ -75,7 +79,7 @@ export function VoiceSttControl({
       });
       onSttError?.(msg);
     }
-  }, [canToggle, isRecording, onSttError, onTranscript, start, stop, transcribeFromUri]);
+  }, [canToggle, isRecording, onBeginRecording, onSttError, onTranscript, start, stop, transcribeFromUri]);
 
   const showRecording = isRecording;
   const showProcessing = processing && !isRecording;

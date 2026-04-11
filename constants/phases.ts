@@ -12,7 +12,7 @@ export const PHASE_ORDER: Phase[] = [
 export const PHASE_LABELS: Record<Phase, string> = {
   ONBOARDING: 'Voice welcome',
   SHARING: 'Sharing',
-  ANALYSIS: 'Construction',
+  ANALYSIS: 'Analysis',
   INNERVOICE: 'InnerVoice replay',
   FEEDBACK: 'Feedback',
   CLOSING: 'Closing',

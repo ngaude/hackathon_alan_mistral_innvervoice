@@ -79,6 +79,18 @@ export default function SessionScreen() {
   } | null>(null);
 
   const [anchorMoodSlider, setAnchorMoodSlider] = useState(ANCHOR_MOOD_EQUILIBRIUM);
+  /** Masque le slider d’humeur (Sharing + Analysis) après le premier « Tap to speak ». */
+  const [anchorMoodSliderHiddenAfterFirstRecording, setAnchorMoodSliderHiddenAfterFirstRecording] = useState(false);
+
+  const onVoiceMicBeginRecording = useCallback(() => {
+    setAnchorMoodSliderHiddenAfterFirstRecording(true);
+  }, []);
+
+  useEffect(() => {
+    if (phase === 'ONBOARDING' && !onboardingDone) {
+      setAnchorMoodSliderHiddenAfterFirstRecording(false);
+    }
+  }, [phase, onboardingDone]);
 
   const onAnchorMoodChange = useCallback(
     (v: number) => {
@@ -100,6 +112,16 @@ export default function SessionScreen() {
   /** Feedback : même échelle qu’à l’ancrage + adéquation du message (`clarity`). */
   const welcomeAudioRef = useRef<{ base64: string; spokenText: string } | null>(null);
   const anchorSpokenRef = useRef(false);
+
+  /** Nouvelle session ou reset : état local + refs alignés sur le store (évite micro grisé / bloqué). */
+  useEffect(() => {
+    if (remoteSessionId != null) return;
+    setAnchorMoodSliderHiddenAfterFirstRecording(false);
+    setAnchorMoodSlider(ANCHOR_MOOD_EQUILIBRIUM);
+    welcomeAudioRef.current = null;
+    anchorSpokenRef.current = false;
+    setCaption(null);
+  }, [remoteSessionId]);
 
   useEffect(() => {
     if (phase !== 'SHARING' || !remoteSessionId || anchorSpokenRef.current) return;
@@ -409,6 +431,14 @@ export default function SessionScreen() {
   const bg = voiceMode === 'INNERVOICE' ? theme.bgDeep : theme.bg;
   const onDarkScreen = voiceMode === 'INNERVOICE';
 
+  /** Header + barre fixes ; zone scroll = fil de discussion (Sharing → Closing). */
+  const persistentSessionLayout =
+    (phase === 'SHARING' && onboardingDone) ||
+    phase === 'ANALYSIS' ||
+    phase === 'INNERVOICE' ||
+    phase === 'FEEDBACK' ||
+    phase === 'CLOSING';
+
   if (crisis) {
     return (
       <View style={[styles.wrap, { backgroundColor: theme.bgDeep }]}>
@@ -442,211 +472,296 @@ export default function SessionScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: bg }}>
-    <ScrollView style={styles.wrap} contentContainerStyle={styles.content}>
-      <View style={styles.headerRow}>
-        <View style={styles.headerLeft}>
-          <Image source={COVER} style={styles.logoSmall} resizeMode="contain" />
-          <Text style={[styles.brand, onDarkScreen && styles.textOnDark]}>InnerVoice</Text>
+      <View style={[styles.stickyTop, { backgroundColor: bg }]}>
+        <View style={styles.headerRow}>
+          <View style={styles.headerLeft}>
+            <Image source={COVER} style={styles.logoSmall} resizeMode="contain" />
+            <Text style={[styles.brand, onDarkScreen && styles.textOnDark]}>InnerVoice</Text>
+          </View>
+          <View style={styles.headerRight}>
+            {remoteSessionId && phase !== 'CLOSING' ? (
+              <Pressable
+                style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.7 }]}
+                onPress={() => {
+                  hapticLight();
+                  resetSession();
+                }}
+                accessibilityLabel="Cancel session"
+              >
+                <Text style={styles.cancelBtnText}>✕</Text>
+              </Pressable>
+            ) : null}
+          </View>
         </View>
-        <View style={styles.headerRight}>
-          <Text style={[styles.phaseBadge, onDarkScreen && styles.phaseOnDark]}>{PHASE_LABELS[phase]}</Text>
-          {remoteSessionId && phase !== 'CLOSING' ? (
-            <Pressable
-              style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.7 }]}
-              onPress={() => {
-                hapticLight();
-                resetSession();
-              }}
-              accessibilityLabel="Cancel session"
-            >
-              <Text style={styles.cancelBtnText}>✕</Text>
-            </Pressable>
-          ) : null}
-        </View>
+
+        {phase !== 'ONBOARDING' && (
+          <SessionProgressBar phase={phase} onDark={onDarkScreen} />
+        )}
+
+        {voiceMode === 'INNERVOICE' && innervoiceSeg !== null ? (
+          <Text style={[styles.innvHint, onDarkScreen && styles.textMutedOnDark]}>
+            Segment {innervoiceSeg + 1}/3 —{' '}
+            {voiceProfile || userMistralVoiceId ? 'your voice' : 'simulated voice (Jane, neutral preset)'}
+          </Text>
+        ) : null}
       </View>
 
-      {phase !== 'ONBOARDING' && (
-        <SessionProgressBar phase={phase} onDark={onDarkScreen} />
+      {persistentSessionLayout ? (
+        <View style={styles.chatSplitRoot}>
+          {phase === 'SHARING' && onboardingDone ? (
+            <View style={[styles.card, styles.cardChatSplit]}>
+              <Text style={styles.label}>Sharing</Text>
+              {!anchorMoodSliderHiddenAfterFirstRecording ? (
+                <AnchorMoodSlider
+                  value={anchorMoodSlider}
+                  onValueChange={onAnchorMoodChange}
+                  onSlidingComplete={hapticLight}
+                  disabled={loading}
+                  variant={emotionalState ? 'analysis' : 'anchoring'}
+                />
+              ) : null}
+              {sharingChatTurns.length === 0 && !emotionalState ? (
+                <Text style={styles.anchorQuestion}>{ANCHOR_WELCOME}</Text>
+              ) : null}
+              <ScrollView
+                style={styles.chatMessagesScroll}
+                contentContainerStyle={styles.chatMessagesScrollContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator
+              >
+                <SessionChatThread
+                  turns={sharingChatTurns}
+                  emptyHint={
+                    emotionalState && sharingChatTurns.length === 0
+                      ? 'Listening for the opening…'
+                      : undefined
+                  }
+                  inverse={onDarkScreen}
+                />
+              </ScrollView>
+              <VoiceSttControl
+                key={remoteSessionId ?? 'no-remote-session'}
+                disabled={loading || !remoteSessionId}
+                label={
+                  emotionalState
+                    ? 'Reply in a few words — at most three turns after the welcome.'
+                    : 'Speak freely about what is on your mind, then stop recording to send.'
+                }
+                busyLabel="Transcribing…"
+                onSttError={(m) => setError(m)}
+                onTranscript={(t) => submitSharingVoice(t)}
+                transcribeFromUri={remoteSessionId ? transcribeFromUri : undefined}
+                onBeginRecording={onVoiceMicBeginRecording}
+              />
+            </View>
+          ) : null}
+
+          {phase === 'ANALYSIS' ? (
+            <View style={[styles.card, styles.cardChatSplit]}>
+              <Text style={styles.label}>{PHASE_LABELS.ANALYSIS}</Text>
+              {!anchorMoodSliderHiddenAfterFirstRecording ? (
+                <AnchorMoodSlider
+                  value={anchorMoodSlider}
+                  onValueChange={onAnchorMoodChange}
+                  onSlidingComplete={hapticLight}
+                  disabled={loading}
+                  variant="analysis"
+                />
+              ) : null}
+              <ScrollView
+                style={styles.chatMessagesScroll}
+                contentContainerStyle={styles.chatMessagesScrollContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator
+              >
+                {analysisChatTurns.length > 0 ? (
+                  <SessionChatThread turns={analysisChatTurns} inverse={onDarkScreen} />
+                ) : (
+                  <Text style={styles.body}>{analysisAgentText || 'Building the focus…'}</Text>
+                )}
+              </ScrollView>
+              {!loading ? (
+                <Pressable
+                  style={({ pressed }) => [styles.btn, styles.btnPrimary, pressed && styles.btnPressed]}
+                  onPress={() => playInnervoiceReplay()}
+                >
+                  <Text style={styles.btnTextPrimary}>Listen to InnerVoice</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
+
+          {phase === 'INNERVOICE' ? (
+            <View style={[styles.card, styles.cardChatSplit]}>
+              <Text style={styles.label}>InnerVoice</Text>
+              <ScrollView
+                style={styles.chatMessagesScroll}
+                contentContainerStyle={styles.chatMessagesScrollContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator
+              >
+                <SessionChatThread turns={analysisChatTurns} inverse={onDarkScreen} />
+              </ScrollView>
+              <Text style={styles.body}>
+                {caption || 'Playing your inner voice…'}
+              </Text>
+              {loading ? (
+                <ActivityIndicator color={theme.accentCyan} style={{ marginVertical: 8 }} />
+              ) : null}
+              <Pressable
+                style={({ pressed }) => [styles.btn, styles.btnGhost, pressed && styles.btnPressed]}
+                onPress={() => {
+                  hapticLight();
+                  setCaption(null);
+                  completeInnervoice();
+                }}
+              >
+                <Text style={styles.btnTextGhost}>Skip to Feedback</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          {phase === 'FEEDBACK' ? (
+            <View style={[styles.card, styles.cardChatSplit]}>
+              <Text style={styles.label}>After listening</Text>
+              <ScrollView
+                style={styles.chatMessagesScroll}
+                contentContainerStyle={styles.chatMessagesScrollContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator
+              >
+                <SessionChatThread turns={analysisChatTurns} inverse={onDarkScreen} />
+              </ScrollView>
+              <SessionFeedbackCard
+                moodBefore={moodBeforeFeedback}
+                moodAfter={fbMoodAfter}
+                onMoodAfterChange={setFbMoodAfter}
+                messageFit={fbMessageFit}
+                onMessageFitChange={setFbMessageFit}
+                onSlidingComplete={hapticLight}
+                disabled={loading}
+              />
+              <Pressable style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]} onPress={submitFeedback}>
+                <Text style={styles.btnText}>Submit</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          {phase === 'CLOSING' ? (
+            <View style={[styles.card, styles.cardChatSplit]}>
+              <ScrollView
+                style={styles.chatMessagesScroll}
+                contentContainerStyle={styles.chatMessagesScrollContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator
+              >
+                <SessionChatThread turns={analysisChatTurns} inverse={onDarkScreen} />
+              </ScrollView>
+              <Text style={styles.closingHeading}>Session summary</Text>
+              <Text style={styles.closingSynthesis}>
+                {formatClosingRestitution(summary, {
+                  cognitiveDistortions: sessionContext.cognitiveDistortions,
+                  sessionNote: sessionContext.sessionNote,
+                })}
+              </Text>
+              {feedbackBeforeStore && feedbackAfterStore ? (
+                <Text style={styles.closingMoodNote}>
+                  {formatMoodMovementLine(anchorMood ?? feedbackBeforeStore.tension, feedbackAfterStore.tension)}
+                </Text>
+              ) : null}
+              <Pressable
+                style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
+                onPress={() => {
+                  hapticLight();
+                  resetSession();
+                }}
+              >
+                <Text style={styles.btnText}>New session</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          {lastError ? (
+            <Text style={[styles.err, onDarkScreen && styles.errOnDark]}>{lastError}</Text>
+          ) : null}
+          {loading ? <ActivityIndicator color={theme.accentCyan} style={{ marginVertical: 12 }} /> : null}
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.bodyScroll}
+          contentContainerStyle={styles.contentScroll}
+          keyboardShouldPersistTaps="handled"
+        >
+          {phase === 'ONBOARDING' && !onboardingDone ? (
+            <View style={styles.card}>
+              <Text style={styles.body}>Record your calm voice for replay, or continue with a neutral voice.</Text>
+              <Pressable
+                style={({ pressed }) => [styles.btn, styles.btnGhost, pressed && styles.btnPressed]}
+                onPress={() => {
+                  hapticLight();
+                  router.push('/onboarding/voice-capture');
+                }}
+              >
+                <Text style={styles.btnTextGhost}>Record</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.btn, styles.btnGhost, pressed && styles.btnPressed]}
+                onPress={() => {
+                  hapticLight();
+                  setOnboardingDone(true);
+                  setPhase('SHARING');
+                }}
+              >
+                <Text style={styles.btnTextGhost}>Neutral voice</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          {lastError ? (
+            <Text style={[styles.err, onDarkScreen && styles.errOnDark]}>{lastError}</Text>
+          ) : null}
+          {loading ? <ActivityIndicator color={theme.accentCyan} style={{ marginVertical: 12 }} /> : null}
+        </ScrollView>
       )}
-
-      {voiceMode === 'INNERVOICE' && innervoiceSeg !== null ? (
-        <Text style={[styles.innvHint, onDarkScreen && styles.textMutedOnDark]}>
-          Segment {innervoiceSeg + 1}/3 —{' '}
-          {voiceProfile || userMistralVoiceId ? 'your voice' : 'simulated voice (Jane, neutral preset)'}
-        </Text>
-      ) : null}
-
-      {phase === 'ONBOARDING' && !onboardingDone ? (
-        <View style={styles.card}>
-          <Text style={styles.body}>Record your calm voice for replay, or continue with a neutral voice.</Text>
-          <Pressable
-            style={({ pressed }) => [styles.btn, styles.btnGhost, pressed && styles.btnPressed]}
-            onPress={() => {
-              hapticLight();
-              router.push('/onboarding/voice-capture');
-            }}
-          >
-            <Text style={styles.btnTextGhost}>Record</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.btn, styles.btnGhost, pressed && styles.btnPressed]}
-            onPress={() => {
-              hapticLight();
-              setOnboardingDone(true);
-              setPhase('SHARING');
-            }}
-          >
-            <Text style={styles.btnTextGhost}>Neutral voice</Text>
-          </Pressable>
-        </View>
-      ) : null}
-
-      {phase === 'SHARING' && onboardingDone ? (
-        <View style={styles.card}>
-          <Text style={styles.label}>Sharing</Text>
-          {sharingChatTurns.length === 0 && !emotionalState ? (
-            <Text style={styles.anchorQuestion}>{ANCHOR_WELCOME}</Text>
-          ) : null}
-          <SessionChatThread
-            turns={sharingChatTurns}
-            emptyHint={
-              emotionalState && sharingChatTurns.length === 0
-                ? 'Listening for the opening…'
-                : undefined
-            }
-            inverse={onDarkScreen}
-          />
-          <AnchorMoodSlider
-            value={anchorMoodSlider}
-            onValueChange={onAnchorMoodChange}
-            onSlidingComplete={hapticLight}
-            disabled={loading}
-            variant={emotionalState ? 'analysis' : 'anchoring'}
-          />
-          <VoiceSttControl
-            disabled={loading || !remoteSessionId}
-            label={
-              emotionalState
-                ? 'Reply in a few words — at most three turns after the welcome.'
-                : 'Speak freely about what is on your mind, then stop recording to send.'
-            }
-            busyLabel="Transcribing…"
-            onSttError={(m) => setError(m)}
-            onTranscript={(t) => submitSharingVoice(t)}
-            transcribeFromUri={remoteSessionId ? transcribeFromUri : undefined}
-          />
-        </View>
-      ) : null}
-
-      {phase === 'ANALYSIS' ? (
-        <View style={styles.card}>
-          <Text style={styles.label}>Discussion</Text>
-          {analysisChatTurns.length > 0 ? (
-            <SessionChatThread turns={analysisChatTurns} inverse={onDarkScreen} />
-          ) : (
-            <Text style={styles.body}>{analysisAgentText || 'Building the focus…'}</Text>
-          )}
-          <AnchorMoodSlider
-            value={anchorMoodSlider}
-            onValueChange={onAnchorMoodChange}
-            onSlidingComplete={hapticLight}
-            disabled={loading}
-            variant="analysis"
-          />
-          {!loading ? (
-            <Pressable
-              style={({ pressed }) => [styles.btn, styles.btnPrimary, pressed && styles.btnPressed]}
-              onPress={() => playInnervoiceReplay()}
-            >
-              <Text style={styles.btnTextPrimary}>Listen to InnerVoice</Text>
-            </Pressable>
-          ) : null}
-        </View>
-      ) : null}
-
-      {phase === 'INNERVOICE' ? (
-        <View style={styles.card}>
-          <Text style={styles.label}>InnerVoice</Text>
-          <Text style={styles.body}>
-            {caption || 'Playing your inner voice…'}
-          </Text>
-          {loading ? (
-            <ActivityIndicator color={theme.accentCyan} style={{ marginVertical: 8 }} />
-          ) : null}
-          <Pressable
-            style={({ pressed }) => [styles.btn, styles.btnGhost, pressed && styles.btnPressed]}
-            onPress={() => {
-              hapticLight();
-              setCaption(null);
-              completeInnervoice();
-            }}
-          >
-            <Text style={styles.btnTextGhost}>Skip to Feedback</Text>
-          </Pressable>
-        </View>
-      ) : null}
-
-      {phase === 'FEEDBACK' ? (
-        <View style={styles.card}>
-          <Text style={styles.label}>After listening</Text>
-          <SessionFeedbackCard
-            moodBefore={moodBeforeFeedback}
-            moodAfter={fbMoodAfter}
-            onMoodAfterChange={setFbMoodAfter}
-            messageFit={fbMessageFit}
-            onMessageFitChange={setFbMessageFit}
-            onSlidingComplete={hapticLight}
-            disabled={loading}
-          />
-          <Pressable style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]} onPress={submitFeedback}>
-            <Text style={styles.btnText}>Submit</Text>
-          </Pressable>
-        </View>
-      ) : null}
-
-      {phase === 'CLOSING' ? (
-        <View style={styles.card}>
-          <Text style={styles.closingHeading}>Session summary</Text>
-          <Text style={styles.closingSynthesis}>
-            {formatClosingRestitution(summary, {
-              cognitiveDistortions: sessionContext.cognitiveDistortions,
-              sessionNote: sessionContext.sessionNote,
-            })}
-          </Text>
-          {feedbackBeforeStore && feedbackAfterStore ? (
-            <Text style={styles.closingMoodNote}>
-              {formatMoodMovementLine(anchorMood ?? feedbackBeforeStore.tension, feedbackAfterStore.tension)}
-            </Text>
-          ) : null}
-          <Pressable
-            style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
-            onPress={() => {
-              hapticLight();
-              resetSession();
-            }}
-          >
-            <Text style={styles.btnText}>New session</Text>
-          </Pressable>
-        </View>
-      ) : null}
-
-      {lastError ? (
-        <Text style={[styles.err, onDarkScreen && styles.errOnDark]}>{lastError}</Text>
-      ) : null}
-      {loading ? <ActivityIndicator color={theme.accentCyan} style={{ marginVertical: 12 }} /> : null}
-
-      {phase === 'INNERVOICE' && loading ? (
-        <Text style={[styles.body, onDarkScreen && styles.textMutedOnDark]}>Preparing / playing replay…</Text>
-      ) : null}
-    </ScrollView>
-    <PlaybackCaptionBar caption={phase === 'ANALYSIS' || phase === 'INNERVOICE' || phase === 'FEEDBACK' || phase === 'CLOSING' ? null : caption} />
+      <PlaybackCaptionBar caption={phase === 'ANALYSIS' || phase === 'INNERVOICE' || phase === 'FEEDBACK' || phase === 'CLOSING' ? null : caption} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  stickyTop: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  chatSplitRoot: {
+    flex: 1,
+    minHeight: 0,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  cardChatSplit: {
+    flex: 1,
+    minHeight: 0,
+    marginBottom: 0,
+  },
+  chatMessagesScroll: {
+    flex: 1,
+    minHeight: 120,
+    marginTop: 4,
+  },
+  chatMessagesScrollContent: {
+    paddingBottom: 8,
+    flexGrow: 1,
+  },
+  bodyScroll: {
+    flex: 1,
+  },
+  contentScroll: {
+    padding: 16,
+    paddingBottom: 40,
+  },
   wrap: { flex: 1 },
-  content: { padding: 16, paddingBottom: 40 },
   hero: {
     width: '100%',
     height: 160,
@@ -672,8 +787,6 @@ const styles = StyleSheet.create({
   cancelBtnText: { color: theme.textMuted, fontSize: 14, fontWeight: '700' },
   brand: { color: theme.text, fontSize: 18, fontWeight: '700' },
   textOnDark: { color: theme.textOnInverse },
-  phaseOnDark: { color: theme.lightPurple },
-  phaseBadge: { color: theme.accentCyan, fontSize: 13, fontWeight: '700' },
   textMutedOnDark: { color: theme.textMutedOnInverse },
   innvHint: { color: theme.textSecondary, marginBottom: 8 },
   card: {

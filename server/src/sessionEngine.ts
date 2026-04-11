@@ -326,13 +326,10 @@ async function sharingSubmitFollowUp(
   });
   perfMs('SHARING_MESSAGE', 'nudge_innervoice_llm', tNudge);
 
-  const nudgeTurn = newTurn('agent', nudgeText, 'ANALYSIS', 'INNERVOICE');
+  const nudgeTurn = newTurn('agent', nudgeText, 'ANALYSIS', 'AGENT');
   turns = [...turns, nudgeTurn];
 
-  const nudgeB64 = await synthesizeInnervoiceUserTts(nudgeText, {
-    userMistralVoiceId: state.userMistralVoiceId,
-    voiceProfileBase64: state.voiceProfileBase64,
-  });
+  const nudgeB64 = await synthesizeWithAgentVoice(nudgeText);
 
   const distortionLine = classified.distortions
     .map((id) => COGNITIVE_DISTORTION_LABELS[id] ?? id)
@@ -370,11 +367,11 @@ async function sharingSubmitFollowUp(
     },
     audio: [
       {
-        label: 'Nudge InnerVoice',
+        label: 'Guide',
         base64: nudgeB64,
         mimeType: 'audio/mpeg',
         spokenText: nudgeText,
-        kind: 'innervoice',
+        kind: 'agent',
       },
       {
         label: 'Agent (analysis)',
