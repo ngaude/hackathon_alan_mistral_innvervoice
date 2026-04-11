@@ -544,7 +544,7 @@ export default function SessionScreen() {
                 disabled={loading || !remoteSessionId}
                 label={
                   emotionalState
-                    ? 'Reply in a few words — at most three turns after the welcome.'
+                    ? 'After the welcome — up to two short replies: first gets one brief guide response, then we move to Focus.'
                     : 'Speak freely about what is on your mind, then stop recording to send.'
                 }
                 busyLabel="Transcribing…"

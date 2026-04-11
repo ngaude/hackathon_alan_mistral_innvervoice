@@ -34,11 +34,11 @@ Produce a single exploration opening message (see system instructions).`,
   const text = raw ? sanitizeSpokenText(raw) : '';
   return (
     text ||
-    "Here, we're one presence reflecting together. We can move step by step, as we, with gentleness. Shall we continue this way?"
+    "We hear what we’re carrying. Let’s stay with it gently — what feels heaviest in this for us right now?"
   );
 }
 
-/** Step 1 or 2 after opening: deepen along CBT columns (without naming the technique). */
+/** One follow-up message after the exploration opening (Sharing demo uses a single step). */
 export async function generateExplorationFollowUp(params: {
   step: 1 | 2;
   sessionSummary: string;
@@ -49,8 +49,8 @@ export async function generateExplorationFollowUp(params: {
   const { step, sessionSummary, lastUserMessage, emotional, selfReportedMood0to10 } = params;
   const stepHint =
     step === 1
-      ? 'Step: clarify the emotion and the automatic thought that goes with it (one thread is enough). One main question.'
-      : 'Step: gentle reappraisal — fact versus interpretation; a kinder angle. One main question.';
+      ? 'Single follow-up turn: weave emotion + sharpest thought in plain language; end with at most one question OR one gentle reframe — 2 short sentences max total.'
+      : 'Single follow-up turn: gentle reappraisal (fact vs interpretation); one question max; 2 short sentences max.';
 
   const content = await mistralPostJson<{
     choices: { message: { content: string } }[];
@@ -72,6 +72,6 @@ Anchor emotion: ${emotional.primary_emotion}.${moodLine(selfReportedMood0to10)}`
   const text = raw ? sanitizeSpokenText(raw) : '';
   return (
     text ||
-    "We can look at what we said and what feels factual. What seems most solid to us here?"
+    "What we said matters. What feels most true underneath it — the feeling or the story we’re telling ourselves?"
   );
 }

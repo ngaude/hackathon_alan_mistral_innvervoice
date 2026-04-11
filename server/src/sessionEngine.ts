@@ -37,7 +37,8 @@ export interface AudioPart {
   kind?: 'user' | 'agent' | 'innervoice';
 }
 
-const MAX_SHARING_USER_FOLLOWUPS = 3;
+/** User follow-up messages in Sharing while still in “we” exploration; when `explorationTurns` reaches this, move to Analysis. Value 2 ⇒ at most one agent follow-up after the opening (user → opening agent → user → one reply → next user ends Sharing). */
+const MAX_SHARING_USER_FOLLOWUPS = 1;
 
 export type ClientEvent =
   | { type: 'SHARING_MESSAGE'; text: string; mood0to10?: number }
