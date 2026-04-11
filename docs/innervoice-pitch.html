@@ -108,17 +108,22 @@
                 <p style="font-size:0.84rem;color:#3d3d6b;margin-top:8px;font-weight:500;">people face a mental health issue each year in France</p>
             </div>
             <div class="glass-card reveal">
-                <div class="stat-num">8 mo.</div>
+                <div class="stat-num">2 mo.</div>
                 <p style="font-size:0.84rem;color:#3d3d6b;margin-top:8px;font-weight:500;">average wait time for a first psychiatrist appointment</p>
             </div>
             <div class="glass-card reveal">
-                <div class="stat-num">€147B</div>
+                <div class="stat-num">€100B</div>
                 <p style="font-size:0.84rem;color:#3d3d6b;margin-top:8px;font-weight:500;">annual economic cost of mental illness in Europe</p>
             </div>
         </div>
-        <div class="glass-card reveal" style="display:flex;align-items:center;gap:16px;border-left:4px solid #5b5bd6;">
-            <span style="font-size:1.6rem;">💬</span>
-            <p style="font-size:0.95rem;color:#1a1a2e;font-weight:500;margin:0;">Positive self-talk is clinically proven to reduce anxiety — yet <strong>no accessible, personalized tool</strong> exists at scale.</p>
+        <div class="glass-card reveal" style="display:flex;flex-direction:column;gap:1rem;border-left:4px solid #5b5bd6;padding:clamp(1.25rem,3vw,1.85rem) clamp(1.35rem,3.2vw,2rem);">
+            <div style="display:flex;align-items:flex-start;gap:14px;">
+                <span style="font-size:clamp(1.75rem,3.5vw,2.25rem);line-height:1;flex-shrink:0;">💬</span>
+                <div style="flex:1;min-width:0;">
+                    <p style="font-family:'DM Serif Display',serif;font-size:clamp(1.45rem,3.8vw,2.45rem);color:#1a1a2e;font-weight:400;line-height:1.2;margin:0 0 0.85rem;letter-spacing:-0.02em;">Positive self-talk is clinically proven to reduce anxiety —</p>
+                    <p style="font-size:clamp(0.9rem,1.5vw,1.05rem);color:#3d3d6b;font-weight:500;margin:0;">yet <strong style="color:#1a1a2e;">no accessible, personalized tool</strong> exists at scale.</p>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -158,8 +163,34 @@
     </div>
 </div>
 
-<!-- SLIDE 4: BUSINESS POTENTIAL -->
+<!-- SLIDE 4: DEMO -->
 <div class="slide" data-slide="4">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:420px;height:420px;top:-90px;left:-70px;background:#8b8bf0;opacity:0.10;"></div>
+        <div class="blob" style="width:340px;height:340px;bottom:-70px;right:-60px;background:#5b5bd6;opacity:0.09;"></div>
+        <div class="blob" style="width:180px;height:180px;top:38%;right:18%;background:#3db07d;opacity:0.07;"></div>
+    </div>
+    <div class="timer-badge">⏱ 2:00</div>
+    <div class="content text-center">
+        <div class="reveal" style="margin-bottom:1rem;">
+            <span class="accent-pill green-pill">Live demo</span>
+        </div>
+        <div class="reveal" style="position:relative;display:inline-block;margin-bottom:1.25rem;">
+            <div style="position:absolute;inset:-12px;border-radius:32px;background:linear-gradient(135deg,rgba(91,91,214,0.2),rgba(139,139,240,0.15),rgba(61,176,125,0.12));filter:blur(8px);z-index:0;"></div>
+            <img class="logo-hero" src="https://user-gen-media-assets.s3.amazonaws.com/gemini_images/1321cd32-94b4-47ca-8bb2-cf09f73640e5.png" alt="InnerVoice — demo" style="position:relative;z-index:1;width:clamp(120px,18vw,168px);margin:0 auto;display:block;border-radius:28px;box-shadow:0 12px 40px rgba(91,91,214,0.22);">
+        </div>
+        <h2 class="reveal" style="font-family:'DM Serif Display',serif;font-size:clamp(1.75rem,3.8vw,2.75rem);color:#1a1a2e;line-height:1.15;margin-bottom:0.75rem;">Demo inception</h2>
+        <p class="reveal" style="font-size:clamp(0.95rem,1.6vw,1.12rem);color:#3d3d6b;max-width:520px;margin:0 auto 1.5rem;font-weight:500;">Walk through the prototype: record your voice, hear your affirmations back in <em>your</em> tone — the “aha” moment for judges.</p>
+        <div class="reveal" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;align-items:center;">
+            <span class="accent-pill">On-device capture</span>
+            <span class="accent-pill">Mistral voice + LLM</span>
+            <span class="accent-pill green-pill">Alan-aligned UX</span>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 5: BUSINESS POTENTIAL -->
+<div class="slide" data-slide="5">
     <div class="gradient-mesh">
         <div class="blob" style="width:400px;height:400px;top:-100px;right:-80px;background:#5b5bd6;opacity:0.10;"></div>
         <div class="blob" style="width:260px;height:260px;bottom:-50px;left:-50px;background:#3db07d;opacity:0.08;"></div>
@@ -207,8 +238,8 @@
     </div>
 </div>
 
-<!-- SLIDE 5: CLOSING -->
-<div class="slide" data-slide="5">
+<!-- SLIDE 6: CLOSING -->
+<div class="slide" data-slide="6">
     <div class="gradient-mesh">
         <div class="blob" style="width:500px;height:500px;top:-130px;right:-100px;background:#5b5bd6;opacity:0.13;"></div>
         <div class="blob" style="width:320px;height:320px;bottom:-80px;left:-60px;background:#3db07d;opacity:0.10;"></div>
@@ -245,7 +276,7 @@
     <button class="nav-btn" onclick="changeSlide(-1)">&#8249;</button>
     <div class="slide-dots" id="dots"></div>
     <button class="nav-btn" onclick="changeSlide(1)">&#8250;</button>
-    <span class="slide-counter" id="counter">1 / 5</span>
+    <span class="slide-counter" id="counter">1 / 6</span>
 </div>
 
 <script>
