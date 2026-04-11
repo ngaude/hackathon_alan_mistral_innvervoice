@@ -1,6 +1,5 @@
-import { Audio } from 'expo-av';
-
-import type { RecordingOptions } from 'expo-av/build/Audio/Recording.types';
+import { AudioQuality, IOSOutputFormat } from 'expo-audio';
+import type { RecordingOptions } from 'expo-audio';
 
 /**
  * Options d’enregistrement pour la transcription Mistral, qui n’accepte que **MP3 ou WAV**
@@ -12,24 +11,24 @@ import type { RecordingOptions } from 'expo-av/build/Audio/Recording.types';
  */
 export const RECORDING_OPTIONS_STT: RecordingOptions = {
   isMeteringEnabled: true,
+  extension: '.wav',
+  sampleRate: 16000,
+  numberOfChannels: 1,
+  bitRate: 256000,
   android: {
     extension: '.wav',
-    outputFormat: Audio.AndroidOutputFormat.DEFAULT,
-    audioEncoder: Audio.AndroidAudioEncoder.DEFAULT,
+    outputFormat: 'default',
+    audioEncoder: 'default',
     sampleRate: 16000,
-    numberOfChannels: 1,
-    bitRate: 128000,
   },
   ios: {
     extension: '.wav',
-    outputFormat: Audio.IOSOutputFormat.LINEARPCM,
-    audioQuality: Audio.IOSAudioQuality.HIGH,
+    outputFormat: IOSOutputFormat.LINEARPCM,
+    audioQuality: AudioQuality.HIGH,
     sampleRate: 16000,
-    numberOfChannels: 1,
     linearPCMBitDepth: 16,
     linearPCMIsBigEndian: false,
     linearPCMIsFloat: false,
-    bitRate: 256000,
   },
   web: {
     mimeType: 'audio/webm',

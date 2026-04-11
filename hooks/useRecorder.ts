@@ -1,56 +1,64 @@
-import { Audio } from 'expo-av';
+import {
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+  useAudioRecorder,
+  useAudioRecorderState,
+} from 'expo-audio';
+import type { RecordingOptions } from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { RECORDING_OPTIONS_STT, RECORDING_OPTIONS_VOICE_PROFILE } from '../constants/recordingStt';
 
 type RecorderQuality = 'low' | 'high' | 'stt' | 'voiceProfile';
+
+function optionsForQuality(q: RecorderQuality): RecordingOptions {
+  if (q === 'stt') return RECORDING_OPTIONS_STT;
+  if (q === 'voiceProfile') return RECORDING_OPTIONS_VOICE_PROFILE;
+  if (q === 'high') return RecordingPresets.HIGH_QUALITY;
+  return RecordingPresets.LOW_QUALITY;
+}
 
 export interface RecordingResult {
   uri: string;
   base64: string;
 }
 
-function optionsForQuality(q: RecorderQuality): Audio.RecordingOptions {
-  if (q === 'stt') return RECORDING_OPTIONS_STT;
-  /** WAV 16 kHz — requis pour Mistral TTS `ref_audio` (pas de M4A « haute qualité »). */
-  if (q === 'voiceProfile') return RECORDING_OPTIONS_VOICE_PROFILE;
-  if (q === 'high') return Audio.RecordingOptionsPresets.HIGH_QUALITY;
-  return Audio.RecordingOptionsPresets.LOW_QUALITY;
-}
-
 export function useRecorder(quality: RecorderQuality = 'low') {
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
+  const options = useMemo(() => optionsForQuality(quality), [quality]);
+  const recorder = useAudioRecorder(options);
+  const recorderState = useAudioRecorderState(recorder, 200);
+  const isRecording = recorderState.isRecording;
 
   const start = useCallback(async () => {
-    const perm = await Audio.requestPermissionsAsync();
+    const perm = await requestRecordingPermissionsAsync();
     if (!perm.granted) {
       throw new Error('Microphone permission denied');
     }
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: true,
-      playsInSilentModeIOS: true,
+    await setAudioModeAsync({
+      allowsRecording: true,
+      playsInSilentMode: true,
+      shouldPlayInBackground: false,
+      interruptionMode: 'duckOthers',
     });
-    const rec = new Audio.Recording();
-    await rec.prepareToRecordAsync(optionsForQuality(quality));
-    await rec.startAsync();
-    setRecording(rec);
-    setIsRecording(true);
-  }, [quality]);
+    await recorder.prepareToRecordAsync();
+    recorder.record();
+  }, [recorder]);
 
   const stop = useCallback(async (): Promise<RecordingResult | null> => {
-    if (!recording) return null;
-    setIsRecording(false);
-    await recording.stopAndUnloadAsync();
-    const uri = recording.getURI();
-    setRecording(null);
-    if (!uri) return null;
+    if (!recorder.getStatus().isRecording) {
+      return null;
+    }
+    await recorder.stop();
+    const uriRaw = recorder.uri;
+    if (!uriRaw) return null;
+    const uri = uriRaw.startsWith('file://') ? uriRaw : `file://${uriRaw}`;
     const base64 = await FileSystem.readAsStringAsync(uri, {
       encoding: FileSystem.EncodingType.Base64,
     });
     return { uri, base64 };
-  }, [recording]);
+  }, [recorder]);
 
   return { start, stop, isRecording };
 }

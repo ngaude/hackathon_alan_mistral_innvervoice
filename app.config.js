@@ -68,7 +68,6 @@ module.exports = {
     plugins: [
       'expo-router',
       'expo-audio',
-      'expo-av',
       'expo-asset',
       'expo-document-picker',
       [

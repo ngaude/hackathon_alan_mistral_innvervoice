@@ -2,8 +2,8 @@
  * Construit un fichier WAV (RIFF / PCM 16-bit little-endian mono) à partir d’octets PCM bruts.
  * Retourne le **base64 brut** (sans préfixe data-URL), comme attendu par Mistral `ref_audio`.
  *
- * Cas d’usage : chaîner un futur flux PCM (natif, WASM, etc.) sans dépendre de `expo-av` / MediaRecorder.
- * `expo-av` sur Android ne fournit pas de LINEARPCM comme sur iOS — d’où `react-native-audio-api` pour le WAV live.
+ * Cas d’usage : chaîner un futur flux PCM (natif, WASM, etc.) sans dépendre de `expo-audio` / MediaRecorder.
+ * `expo-audio` sur Android ne fournit pas de LINEARPCM comme sur iOS — d’où `react-native-audio-api` pour le WAV live.
  */
 export function pcm16MonoToWavBase64(pcm: Uint8Array, sampleRate: number): string {
   if (pcm.byteLength % 2 !== 0) {
