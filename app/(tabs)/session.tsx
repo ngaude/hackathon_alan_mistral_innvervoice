@@ -113,6 +113,15 @@ export default function SessionScreen() {
   const welcomeAudioRef = useRef<{ base64: string; spokenText: string } | null>(null);
   const anchorSpokenRef = useRef(false);
 
+  /** Fils Sharing / Analysis : garder la vue sur les derniers messages. */
+  const chatScrollRef = useRef<ScrollView | null>(null);
+  const scrollChatToBottom = useCallback(() => {
+    chatScrollRef.current?.scrollToEnd({ animated: false });
+  }, []);
+  const onChatThreadContentSizeChange = useCallback(() => {
+    scrollChatToBottom();
+  }, [scrollChatToBottom]);
+
   /** Nouvelle session ou reset : état local + refs alignés sur le store (évite micro grisé / bloqué). */
   useEffect(() => {
     if (remoteSessionId != null) return;
@@ -156,9 +165,12 @@ export default function SessionScreen() {
     prevPhaseRef.current = phase;
   }, [phase, moodBeforeFeedback]);
 
+  /** Refait la sync profil quand `voiceGateCompleted` repasse à false (ex. reset session). */
   useEffect(() => {
     const apiBase = getInnervoiceApiUrl();
     if (!apiBase) return;
+    if (voiceGateCompleted) return;
+
     let cancelled = false;
     (async () => {
       try {
@@ -176,7 +188,7 @@ export default function SessionScreen() {
     return () => {
       cancelled = true;
     };
-  }, [setVoiceGateCompleted]);
+  }, [voiceGateCompleted, setVoiceGateCompleted]);
 
   useEffect(() => {
     if (phase !== 'ONBOARDING' || onboardingDone) return;
@@ -235,7 +247,7 @@ export default function SessionScreen() {
           setError(e instanceof Error ? e.message : 'Session API unavailable');
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       }
     })();
     return () => {
@@ -265,6 +277,15 @@ export default function SessionScreen() {
     () => turns.filter((t) => t.phase === 'SHARING' || t.phase === 'ANALYSIS'),
     [turns]
   );
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        scrollChatToBottom();
+      });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [turns, analysisAgentText, phase, scrollChatToBottom]);
 
   const completeInnervoice = useCallback(async () => {
     if (!remoteSessionId) return;
@@ -524,10 +545,12 @@ export default function SessionScreen() {
                 <Text style={styles.anchorQuestion}>{ANCHOR_WELCOME}</Text>
               ) : null}
               <ScrollView
+                ref={chatScrollRef}
                 style={styles.chatMessagesScroll}
                 contentContainerStyle={styles.chatMessagesScrollContent}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator
+                onContentSizeChange={onChatThreadContentSizeChange}
               >
                 <SessionChatThread
                   turns={sharingChatTurns}
@@ -569,10 +592,12 @@ export default function SessionScreen() {
                 />
               ) : null}
               <ScrollView
+                ref={chatScrollRef}
                 style={styles.chatMessagesScroll}
                 contentContainerStyle={styles.chatMessagesScrollContent}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator
+                onContentSizeChange={onChatThreadContentSizeChange}
               >
                 {analysisChatTurns.length > 0 ? (
                   <SessionChatThread turns={analysisChatTurns} inverse={onDarkScreen} />
@@ -595,10 +620,12 @@ export default function SessionScreen() {
             <View style={[styles.card, styles.cardChatSplit]}>
               <Text style={styles.label}>InnerVoice</Text>
               <ScrollView
+                ref={chatScrollRef}
                 style={styles.chatMessagesScroll}
                 contentContainerStyle={styles.chatMessagesScrollContent}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator
+                onContentSizeChange={onChatThreadContentSizeChange}
               >
                 <SessionChatThread turns={analysisChatTurns} inverse={onDarkScreen} />
               </ScrollView>
@@ -623,15 +650,6 @@ export default function SessionScreen() {
 
           {phase === 'FEEDBACK' ? (
             <View style={[styles.card, styles.cardChatSplit]}>
-              <Text style={styles.label}>After listening</Text>
-              <ScrollView
-                style={styles.chatMessagesScroll}
-                contentContainerStyle={styles.chatMessagesScrollContent}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator
-              >
-                <SessionChatThread turns={analysisChatTurns} inverse={onDarkScreen} />
-              </ScrollView>
               <SessionFeedbackCard
                 moodBefore={moodBeforeFeedback}
                 moodAfter={fbMoodAfter}
@@ -650,10 +668,12 @@ export default function SessionScreen() {
           {phase === 'CLOSING' ? (
             <View style={[styles.card, styles.cardChatSplit]}>
               <ScrollView
+                ref={chatScrollRef}
                 style={styles.chatMessagesScroll}
                 contentContainerStyle={styles.chatMessagesScrollContent}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator
+                onContentSizeChange={onChatThreadContentSizeChange}
               >
                 <SessionChatThread turns={analysisChatTurns} inverse={onDarkScreen} />
               </ScrollView>

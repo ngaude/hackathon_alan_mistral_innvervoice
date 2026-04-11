@@ -46,10 +46,16 @@ export function AnchorMoodSlider({
       : variant === 'analysis'
         ? 'You can still adjust before continuing.'
         : variant === 'feedbackBefore'
-          ? 'What you indicated when you began.'
-          : 'Where are you now, after listening?';
+          ? 'This is the same 0–10 mood scale as during the session: 0 leans heavier or low, 5 is balanced, 10 is more lift or energy.'
+          : variant === 'feedbackAfter'
+            ? 'Same colors as at the start: purple is heavier or low, amber is in between, green is more lift or energy.'
+            : 'Where are you now, after listening?';
 
-  const showLongLegend = variant === 'anchoring' || variant === 'analysis';
+  const showLongLegend =
+    variant === 'anchoring' ||
+    variant === 'analysis' ||
+    variant === 'feedbackBefore' ||
+    variant === 'feedbackAfter';
 
   return (
     <View style={[styles.wrap, readOnly && styles.wrapReadonly]}>
@@ -78,14 +84,23 @@ export function AnchorMoodSlider({
         <Text style={[styles.endLabel, { color: MOOD_COLOR_EXCITED }]}>More energy</Text>
       </View>
 
+      {variant === 'feedbackBefore' && readOnly ? (
+        <Text
+          style={styles.numericScale}
+          accessibilityLabel={`Your mood at the start was ${clampAnchorMood(value)} out of ${ANCHOR_MOOD_MAX}`}
+        >
+          Your rating when you began: {clampAnchorMood(value)} / {ANCHOR_MOOD_MAX}
+        </Text>
+      ) : null}
+
       {readOnly ? null : (
         <Slider
           style={styles.slider}
           minimumValue={ANCHOR_MOOD_MIN}
           maximumValue={ANCHOR_MOOD_MAX}
           step={1}
-          value={value}
-          onValueChange={onValueChange ?? (() => {})}
+          value={clampAnchorMood(value)}
+          onValueChange={(v) => (onValueChange ?? (() => {}))(clampAnchorMood(v))}
           onSlidingComplete={onSlidingComplete}
           disabled={disabled}
           minimumTrackTintColor={theme.border}
@@ -93,6 +108,11 @@ export function AnchorMoodSlider({
           thumbTintColor={thumbTintForAnchorMood(value)}
         />
       )}
+      {variant === 'feedbackAfter' && !readOnly ? (
+        <Text style={styles.numericScale} accessibilityLabel={`Mood score ${clampAnchorMood(value)} out of ${ANCHOR_MOOD_MAX}`}>
+          After replay — your rating: {clampAnchorMood(value)} / {ANCHOR_MOOD_MAX}
+        </Text>
+      ) : null}
       <Text
         style={[styles.liveLabel, { color: thumbTintForAnchorMood(value) }]}
         accessibilityLiveRegion="polite"
@@ -148,6 +168,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   slider: { width: '100%', height: 44, marginTop: 4 },
+  numericScale: {
+    marginTop: 8,
+    fontSize: 15,
+    fontWeight: '700',
+    textAlign: 'center',
+    color: theme.textSecondary,
+    letterSpacing: 0.5,
+  },
   liveLabel: {
     marginTop: 10,
     fontSize: 15,
