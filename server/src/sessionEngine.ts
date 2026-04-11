@@ -37,7 +37,7 @@ export interface AudioPart {
   kind?: 'user' | 'agent' | 'innervoice';
 }
 
-const MAX_SHARING_USER_FOLLOWUPS = 3;
+const MAX_SHARING_USER_FOLLOWUPS = 1;
 
 export type ClientEvent =
   | { type: 'SHARING_MESSAGE'; text: string; mood0to10?: number }
@@ -501,6 +501,10 @@ async function handleStartInnervoice(
 async function handleCompleteInnervoice(
   state: SessionSnapshot
 ): Promise<{ state: SessionSnapshot; audio: AudioPart[] }> {
+  /** Idempotent: skip during playback then auto-complete races with “Skip to Feedback”. */
+  if (state.phase === 'FEEDBACK') {
+    return { state, audio: [] };
+  }
   if (state.phase !== 'INNERVOICE') {
     throw new Error('Invalid phase for COMPLETE_INNERVOICE');
   }

@@ -268,6 +268,9 @@ export default function SessionScreen() {
 
   const completeInnervoice = useCallback(async () => {
     if (!remoteSessionId) return;
+    const p = useSessionStore.getState().phase;
+    if (p === 'FEEDBACK') return;
+    if (p !== 'INNERVOICE') return;
     try {
       const { state } = await postSessionEvent(remoteSessionId, {
         type: 'COMPLETE_INNERVOICE',
@@ -623,15 +626,6 @@ export default function SessionScreen() {
 
           {phase === 'FEEDBACK' ? (
             <View style={[styles.card, styles.cardChatSplit]}>
-              <Text style={styles.label}>After listening</Text>
-              <ScrollView
-                style={styles.chatMessagesScroll}
-                contentContainerStyle={styles.chatMessagesScrollContent}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator
-              >
-                <SessionChatThread turns={analysisChatTurns} inverse={onDarkScreen} />
-              </ScrollView>
               <SessionFeedbackCard
                 moodBefore={moodBeforeFeedback}
                 moodAfter={fbMoodAfter}
