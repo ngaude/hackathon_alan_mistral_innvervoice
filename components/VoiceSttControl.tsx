@@ -65,9 +65,15 @@ export function VoiceSttControl({
           setProcessing(false);
         }
       }
-    } catch {
+    } catch (err) {
       hapticWarning();
       setProcessing(false);
+      const msg = err instanceof Error ? err.message : 'Recording failed';
+      console.warn('[InnerVoice/VoiceSttControl] recording error', {
+        message: msg,
+        stack: err instanceof Error ? err.stack : undefined,
+      });
+      onSttError?.(msg);
     }
   }, [canToggle, isRecording, onSttError, onTranscript, start, stop, transcribeFromUri]);
 

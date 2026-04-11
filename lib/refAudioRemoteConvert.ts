@@ -2,7 +2,7 @@ import { getRefAudioConvertSecret, getRefAudioConvertUrl } from './env';
 import { describeMistralAudioBase64, normalizeRefAudioBase64 } from './refAudio';
 
 /**
- * Conversion **sans module natif** : envoie le base64 (souvent M4A/MP4 issu d’`expo-av` sur Android)
+ * Conversion **sans module natif** : envoie le base64 (souvent M4A/MP4 issu d’`expo-audio` sur Android)
  * vers une URL que vous hébergez ; la réponse doit contenir un WAV en base64.
  *
  * Utile pour **Expo Go**, où `react-native-audio-api` / FFmpeg ne sont pas disponibles.

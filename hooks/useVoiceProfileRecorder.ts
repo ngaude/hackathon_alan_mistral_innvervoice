@@ -22,16 +22,16 @@ function isRunningInExpoGo(): boolean {
  * - **Development build** (binaire compilé avec le projet : `npx expo run:android`, EAS Build, etc.) :
  *   le module natif `react-native-audio-api` est présent → **WAV live** au micro (format compatible Mistral).
  * - **Expo Go** : ce module **n’est pas chargé** (Expo Go ne contient pas les natifs du repo).
- *   On retombe sur **`expo-av`**, qui sort souvent du M4A/MP4 → **repli + import d’un fichier WAV/MP3**
+ *   On retombe sur **`expo-audio`** (`useRecorder`), qui sur Android sort souvent du M4A/MP4 → **repli + import WAV/MP3**
  *   si le clone échoue, ou utiliser un build natif pour le live.
- * - Si l’init native **échoue** (autre cause), même repli `expo-av` (`androidFallbackExpo`).
+ * - Si l’init native **échoue** (autre cause), même repli `expo-audio` (`androidFallbackExpo`).
  *
- * **iOS / web** : `expo-av` (iOS produit déjà du WAV correct pour ce flux).
+ * **iOS / web** : `expo-audio` (WAV LINEARPCM 16 kHz pour ce flux).
  */
 export function useVoiceProfileRecorder() {
   const expoRec = useRecorder('voiceProfile');
   const [androidRecording, setAndroidRecording] = useState(false);
-  /** Si `true`, Android utilise expo-av (pas de WAV garanti). */
+  /** Si `true`, Android utilise le même enregistreur `expo-audio` que le STT (pas de WAV garanti). */
   const [androidFallbackExpo, setAndroidFallbackExpo] = useState(false);
   /** Réf. enregistreur natif — type volontairement lâche pour éviter tout import du package au parse Metro. */
   const nativeRef = useRef<{ stop: () => { status: string; path?: string; message?: string } } | null>(null);
