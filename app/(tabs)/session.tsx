@@ -5,6 +5,7 @@ import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View
 
 import { AnchorMoodSlider } from '../../components/AnchorMoodSlider';
 import { SessionFeedbackCard } from '../../components/SessionFeedbackCard';
+import { SessionProgressBar } from '../../components/SessionProgressBar';
 import { PlaybackCaptionBar } from '../../components/PlaybackCaptionBar';
 import { VoiceSttControl } from '../../components/VoiceSttControl';
 import { ANCHOR_MOOD_EQUILIBRIUM, clampAnchorMood } from '../../constants/anchorMood';
@@ -25,6 +26,8 @@ import { buildSummaryFromTurns } from '../../services/summaryFromTurns';
 import { crisisUserMessage } from '../../services/safety';
 import { useSessionStore } from '../../store/sessionStore';
 import type { Phase, SessionSnapshot } from '../../types/session';
+
+const ANCHOR_WELCOME = "What's been on your mind lately?";
 
 const COVER = require('../../assets/innervoice-logo.png');
 
@@ -93,6 +96,24 @@ export default function SessionScreen() {
   }, [phase, onboardingDone, patchSessionContext]);
 
   /** Feedback : même échelle qu’à l’ancrage + adéquation du message (`clarity`). */
+  const welcomeAudioRef = useRef<{ base64: string; spokenText: string } | null>(null);
+  const anchorSpokenRef = useRef(false);
+
+  useEffect(() => {
+    if (phase !== 'ANCHORING' || !remoteSessionId || anchorSpokenRef.current) return;
+    const audio = welcomeAudioRef.current;
+    if (!audio) return;
+    anchorSpokenRef.current = true;
+    playServerAudioParts(
+      [{ base64: audio.base64, spokenText: audio.spokenText, kind: 'agent' }],
+      (t) => setCaption(t)
+    ).catch(() => {});
+  }, [phase, remoteSessionId]);
+
+  useEffect(() => {
+    if (phase === 'ONBOARDING') anchorSpokenRef.current = false;
+  }, [phase]);
+
   const [fbMoodAfter, setFbMoodAfter] = useState(ANCHOR_MOOD_EQUILIBRIUM);
   const [fbMessageFit, setFbMessageFit] = useState(6);
   const prevPhaseRef = useRef<Phase | null>(null);
@@ -120,8 +141,10 @@ export default function SessionScreen() {
         const uid = await getOrCreateUserId();
         const dn = await getDisplayName();
         const prof = await syncUserWithServer(uid, dn);
-        if (!cancelled) setServerProfile(prof);
-        if (!prof.mistralVoiceId) setVoiceGateCompleted(true);
+        if (!cancelled) {
+          setServerProfile(prof);
+          setVoiceGateCompleted(true);
+        }
       } catch {
         if (!cancelled) setVoiceGateCompleted(true);
       }
@@ -130,6 +153,16 @@ export default function SessionScreen() {
       cancelled = true;
     };
   }, [setVoiceGateCompleted]);
+
+  useEffect(() => {
+    if (phase !== 'ONBOARDING' || onboardingDone) return;
+    if (serverProfile?.mistralVoiceId) {
+      setUserMistralVoiceId(serverProfile.mistralVoiceId);
+      setVoiceProfile(null);
+      setOnboardingDone(true);
+      setPhase('ANCHORING');
+    }
+  }, [phase, onboardingDone, serverProfile, setUserMistralVoiceId, setVoiceProfile, setOnboardingDone, setPhase]);
 
   const applySnapshot = useCallback(
     (snap: SessionSnapshot) => {
@@ -163,13 +196,14 @@ export default function SessionScreen() {
       try {
         const uid = await getOrCreateUserId();
         const dn = await getDisplayName();
-        const { sessionId, state } = await createRemoteSession({
+        const { sessionId, state, welcomeAudio } = await createRemoteSession({
           userId: uid,
           displayName: dn,
           voiceProfileBase64: voiceProfile,
           userMistralVoiceId,
         });
         if (cancelled) return;
+        if (welcomeAudio) welcomeAudioRef.current = welcomeAudio;
         setRemoteSessionId(sessionId);
         applySnapshot(state);
       } catch (e) {
@@ -206,7 +240,18 @@ export default function SessionScreen() {
     return t?.text?.trim() ?? '';
   }, [turns]);
 
-  /** Rejeu InnerVoice (voix clonée) après la problématique — traité entièrement par le serveur. */
+  const completeInnervoice = useCallback(async () => {
+    if (!remoteSessionId) return;
+    try {
+      const { state } = await postSessionEvent(remoteSessionId, {
+        type: 'COMPLETE_INNERVOICE',
+      });
+      applySnapshot(state);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Transition error');
+    }
+  }, [applySnapshot, remoteSessionId, setError]);
+
   const playInnervoiceReplay = useCallback(
     async (options?: { manageLoading?: boolean }) => {
       const manageLoading = options?.manageLoading !== false;
@@ -219,6 +264,7 @@ export default function SessionScreen() {
         setLoading(true);
       }
       setError(null);
+      setPhase('INNERVOICE');
       try {
         const { state, audio } = await postSessionEvent(remoteSessionId, {
           type: 'START_INNERVOICE',
@@ -229,6 +275,8 @@ export default function SessionScreen() {
           audio.map((a) => ({ base64: a.base64, spokenText: a.spokenText })),
           (t) => setCaption(t)
         );
+        setCaption(null);
+        await completeInnervoice();
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Replay error');
       } finally {
@@ -237,7 +285,7 @@ export default function SessionScreen() {
         }
       }
     },
-    [applySnapshot, remoteSessionId, setCaption, setError, setLoading]
+    [applySnapshot, completeInnervoice, remoteSessionId, setCaption, setError, setLoading, setPhase]
   );
 
   const submitExplorationText = useCallback(
@@ -440,63 +488,32 @@ export default function SessionScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: bg }}>
     <ScrollView style={styles.wrap} contentContainerStyle={styles.content}>
-      <Image source={COVER} style={styles.hero} resizeMode="contain" />
       <View style={styles.headerRow}>
-        <Text style={[styles.brand, onDarkScreen && styles.textOnDark]}>InnerVoice</Text>
-        <Text style={[styles.phaseBadge, onDarkScreen && styles.phaseOnDark]}>{PHASE_LABELS[phase]}</Text>
-      </View>
-      {serverProfile?.mistralVoiceId && !voiceGateCompleted ? (
-        <View style={styles.card}>
-          <Text style={styles.label}>Voice</Text>
-          <Text style={styles.body}>A voice print is already saved for this account.</Text>
-          <Pressable
-            style={({ pressed }) => [styles.btn, styles.btnPrimary, pressed && styles.btnPressed]}
-            onPress={() => {
-              hapticLight();
-              setUserMistralVoiceId(serverProfile.mistralVoiceId);
-              setVoiceProfile(null);
-              setOnboardingDone(true);
-              setPhase('ANCHORING');
-              setVoiceGateCompleted(true);
-            }}
-          >
-            <Text style={styles.btnTextPrimary}>Use my saved voice</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
-            onPress={() => {
-              hapticLight();
-              setUserMistralVoiceId(null);
-              setVoiceProfile(null);
-              setOnboardingDone(false);
-              setPhase('ONBOARDING');
-              setVoiceGateCompleted(true);
-              router.push('/onboarding/voice-capture');
-            }}
-          >
-            <Text style={styles.btnText}>Record again</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.btn, styles.btnGhost, pressed && styles.btnPressed]}
-            onPress={() => {
-              hapticLight();
-              setUserMistralVoiceId(null);
-              setVoiceProfile(null);
-              setOnboardingDone(true);
-              setPhase('ANCHORING');
-              setVoiceGateCompleted(true);
-            }}
-          >
-            <Text style={styles.btnTextGhost}>Without my voice (neutral)</Text>
-          </Pressable>
+        <View style={styles.headerLeft}>
+          <Image source={COVER} style={styles.logoSmall} resizeMode="contain" />
+          <Text style={[styles.brand, onDarkScreen && styles.textOnDark]}>InnerVoice</Text>
         </View>
-      ) : null}
+        <View style={styles.headerRight}>
+          <Text style={[styles.phaseBadge, onDarkScreen && styles.phaseOnDark]}>{PHASE_LABELS[phase]}</Text>
+          {remoteSessionId && phase !== 'CLOSING' ? (
+            <Pressable
+              style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.7 }]}
+              onPress={() => {
+                hapticLight();
+                resetSession();
+              }}
+              accessibilityLabel="Cancel session"
+            >
+              <Text style={styles.cancelBtnText}>✕</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
 
-      {!(serverProfile?.mistralVoiceId && !voiceGateCompleted) ? (
-        <Text style={[styles.modeLine, onDarkScreen && styles.textMutedOnDark]}>
-          {voiceMode === 'INNERVOICE' ? '● InnerVoice mode' : '○ Exchange mode (agent)'}
-        </Text>
-      ) : null}
+      {phase !== 'ONBOARDING' && (
+        <SessionProgressBar phase={phase} onDark={onDarkScreen} />
+      )}
+
       {voiceMode === 'INNERVOICE' && innervoiceSeg !== null ? (
         <Text style={[styles.innvHint, onDarkScreen && styles.textMutedOnDark]}>
           Segment {innervoiceSeg + 1}/3 —{' '}
@@ -504,9 +521,7 @@ export default function SessionScreen() {
         </Text>
       ) : null}
 
-      {phase === 'ONBOARDING' &&
-      !onboardingDone &&
-      !(serverProfile?.mistralVoiceId && !voiceGateCompleted) ? (
+      {phase === 'ONBOARDING' && !onboardingDone ? (
         <View style={styles.card}>
           <Text style={styles.body}>Record your calm voice for replay, or continue with a neutral voice.</Text>
           <Pressable
@@ -545,20 +560,13 @@ export default function SessionScreen() {
 
       {phase === 'EXPLORATION' && onboardingDone ? (
         <View style={styles.card}>
-          <AnchorMoodSlider
-            value={anchorMoodSlider}
-            onValueChange={onAnchorMoodChange}
-            onSlidingComplete={hapticLight}
-            disabled={loading}
-            variant="analysis"
-          />
-          <Text style={styles.label}>Exploration (we)</Text>
+          <Text style={styles.label}>Exploration</Text>
           <Text style={styles.body}>
             {lastExplorationAgentText || 'Listening for the opening…'}
           </Text>
           <VoiceSttControl
             disabled={loading || !remoteSessionId}
-            label="Reply in a few words — at most three turns after the welcome."
+            label="Reply in a few words."
             busyLabel="Transcribing…"
             onSttError={(m) => setError(m)}
             onTranscript={(t) => submitExplorationText(t)}
@@ -569,24 +577,37 @@ export default function SessionScreen() {
 
       {phase === 'ANALYSIS' ? (
         <View style={styles.card}>
-          <AnchorMoodSlider
-            value={anchorMoodSlider}
-            onValueChange={onAnchorMoodChange}
-            onSlidingComplete={hapticLight}
-            disabled={loading}
-            variant="analysis"
-          />
           <Text style={styles.body}>{analysisAgentText || 'Building the focus…'}</Text>
           {!loading ? (
             <Pressable
               style={({ pressed }) => [styles.btn, styles.btnPrimary, pressed && styles.btnPressed]}
               onPress={() => playInnervoiceReplay()}
             >
-              <Text style={styles.btnTextPrimary}>Listen to InnerVoice replay</Text>
+              <Text style={styles.btnTextPrimary}>Listen to InnerVoice</Text>
             </Pressable>
-          ) : (
-            <Text style={styles.hintMuted}>Preparing…</Text>
-          )}
+          ) : null}
+        </View>
+      ) : null}
+
+      {phase === 'INNERVOICE' ? (
+        <View style={styles.card}>
+          <Text style={styles.label}>InnerVoice</Text>
+          <Text style={styles.body}>
+            {caption || 'Playing your inner voice…'}
+          </Text>
+          {loading ? (
+            <ActivityIndicator color={theme.accentCyan} style={{ marginVertical: 8 }} />
+          ) : null}
+          <Pressable
+            style={({ pressed }) => [styles.btn, styles.btnGhost, pressed && styles.btnPressed]}
+            onPress={() => {
+              hapticLight();
+              setCaption(null);
+              completeInnervoice();
+            }}
+          >
+            <Text style={styles.btnTextGhost}>Skip to Feedback</Text>
+          </Pressable>
         </View>
       ) : null}
 
@@ -641,9 +662,9 @@ export default function SessionScreen() {
 
       {phase === 'ANCHORING' && onboardingDone ? (
         <View style={styles.card}>
+          <Text style={styles.anchorQuestion}>{ANCHOR_WELCOME}</Text>
           <VoiceSttControl
             disabled={loading || !remoteSessionId}
-            label="Speak freely about what is on your mind, then stop recording to send."
             busyLabel="Transcribing…"
             onSttError={(m) => setError(m)}
             onTranscript={(t) => submitUserText(t)}
@@ -652,11 +673,8 @@ export default function SessionScreen() {
         </View>
       ) : null}
 
-      {phase === 'INNERVOICE' && loading ? (
-        <Text style={[styles.body, onDarkScreen && styles.textMutedOnDark]}>Preparing / playing replay…</Text>
-      ) : null}
     </ScrollView>
-    <PlaybackCaptionBar caption={caption} />
+    <PlaybackCaptionBar caption={phase === 'ANALYSIS' || phase === 'INNERVOICE' || phase === 'FEEDBACK' || phase === 'CLOSING' ? null : caption} />
     </View>
   );
 }
@@ -672,12 +690,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.border,
   },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  brand: { color: theme.text, fontSize: 20, fontWeight: '700' },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  logoSmall: { width: 64, height: 64, borderRadius: 12 },
+  cancelBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: theme.surface,
+    borderWidth: 1,
+    borderColor: theme.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelBtnText: { color: theme.textMuted, fontSize: 14, fontWeight: '700' },
+  brand: { color: theme.text, fontSize: 18, fontWeight: '700' },
   textOnDark: { color: theme.textOnInverse },
   phaseOnDark: { color: theme.lightPurple },
   phaseBadge: { color: theme.accentCyan, fontSize: 13, fontWeight: '700' },
-  modeLine: { color: theme.textMuted, marginTop: 8, marginBottom: 12 },
   textMutedOnDark: { color: theme.textMutedOnInverse },
   innvHint: { color: theme.textSecondary, marginBottom: 8 },
   card: {
@@ -736,6 +767,14 @@ const styles = StyleSheet.create({
   btnText: { color: theme.text, fontWeight: '600' },
   btnTextPrimary: { color: theme.textOnPrimary, fontWeight: '700' },
   btnTextGhost: { color: theme.accentCyan, fontWeight: '600', fontSize: 15 },
+  anchorQuestion: {
+    color: theme.text,
+    fontSize: 20,
+    fontWeight: '700',
+    lineHeight: 28,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
   hintMuted: { color: theme.textMuted, fontSize: 13, lineHeight: 18, marginTop: 8 },
   err: { color: theme.danger, marginTop: 8 },
   errOnDark: { color: '#F9A8A8' },

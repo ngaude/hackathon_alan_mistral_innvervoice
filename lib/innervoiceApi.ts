@@ -8,6 +8,7 @@ export type ClientEvent =
   | { type: 'EXPLORATION_MESSAGE'; text: string; mood0to10?: number }
   | { type: 'ANALYSIS_MESSAGE'; text: string; mood0to10?: number }
   | { type: 'START_INNERVOICE'; consent?: boolean }
+  | { type: 'COMPLETE_INNERVOICE' }
   | {
       type: 'FEEDBACK_SUBMIT';
       wRepli?: number;
@@ -162,7 +163,11 @@ export async function createRemoteSession(params: {
   displayName?: string;
   voiceProfileBase64: string | null;
   userMistralVoiceId: string | null;
-}): Promise<{ sessionId: string; state: SessionSnapshot }> {
+}): Promise<{
+  sessionId: string;
+  state: SessionSnapshot;
+  welcomeAudio?: { base64: string; spokenText: string } | null;
+}> {
   const res = await apiFetch('/api/sessions', {
     method: 'POST',
     body: JSON.stringify({
@@ -173,7 +178,11 @@ export async function createRemoteSession(params: {
     }),
   });
   if (!res.ok) throw new Error(await readInnervoiceErrorMessage(res));
-  return res.json() as Promise<{ sessionId: string; state: SessionSnapshot }>;
+  return res.json() as Promise<{
+    sessionId: string;
+    state: SessionSnapshot;
+    welcomeAudio?: { base64: string; spokenText: string } | null;
+  }>;
 }
 
 export async function transcribeOnServer(
