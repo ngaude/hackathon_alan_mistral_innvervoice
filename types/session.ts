@@ -1,7 +1,6 @@
 export type Phase =
   | 'ONBOARDING'
-  | 'ANCHORING'
-  | 'EXPLORATION'
+  | 'SHARING'
   | 'ANALYSIS'
   | 'INNERVOICE'
   | 'FEEDBACK'

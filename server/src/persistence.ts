@@ -7,6 +7,22 @@ import { logInfo } from './log.js';
 import type { AudioPart } from './sessionEngine.js';
 import type { SessionSnapshot } from './sessionTypes.js';
 
+/** Ancres JSON avant fusion ANCHORING + EXPLORATION → SHARING. */
+export function migrateSnapshotPhasesFromLegacy(parsed: SessionSnapshot): SessionSnapshot {
+  const mapPhase = (p: string): SessionSnapshot['phase'] => {
+    if (p === 'ANCHORING' || p === 'EXPLORATION') return 'SHARING';
+    return p as SessionSnapshot['phase'];
+  };
+  return {
+    ...parsed,
+    phase: mapPhase(String(parsed.phase)),
+    turns: parsed.turns.map((t) => ({
+      ...t,
+      phase: mapPhase(String(t.phase)),
+    })),
+  };
+}
+
 export function upsertUser(id: string, displayName: string): void {
   const db = getDb();
   const now = Date.now();
@@ -178,7 +194,8 @@ export function loadSessionSnapshot(sessionId: string): SessionSnapshot | null {
   const j = getSessionSnapshotJson(sessionId);
   if (!j) return null;
   try {
-    return JSON.parse(j) as SessionSnapshot;
+    const parsed = JSON.parse(j) as SessionSnapshot;
+    return migrateSnapshotPhasesFromLegacy(parsed);
   } catch {
     return null;
   }

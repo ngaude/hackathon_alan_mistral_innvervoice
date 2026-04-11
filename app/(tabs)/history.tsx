@@ -75,7 +75,11 @@ function findAnalysisAudioIndex(segments: TimelineSegment[]): number {
 }
 
 function firstAnchorUserTurn(turns: ConversationTurn[]): string | null {
-  const u = turns.find((t) => t.role === 'user' && t.phase === 'ANCHORING');
+  const u = turns.find((t) => {
+    if (t.role !== 'user') return false;
+    const p = t.phase as string;
+    return p === 'SHARING' || p === 'ANCHORING' || p === 'EXPLORATION';
+  });
   return u?.text?.trim() || null;
 }
 

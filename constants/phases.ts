@@ -2,8 +2,7 @@ import type { Phase } from '../types/session';
 
 export const PHASE_ORDER: Phase[] = [
   'ONBOARDING',
-  'ANCHORING',
-  'EXPLORATION',
+  'SHARING',
   'ANALYSIS',
   'INNERVOICE',
   'FEEDBACK',
@@ -12,8 +11,7 @@ export const PHASE_ORDER: Phase[] = [
 
 export const PHASE_LABELS: Record<Phase, string> = {
   ONBOARDING: 'Voice welcome',
-  ANCHORING: 'Anchoring',
-  EXPLORATION: 'Exploration',
+  SHARING: 'Sharing',
   ANALYSIS: 'Construction',
   INNERVOICE: 'InnerVoice replay',
   FEEDBACK: 'Feedback',

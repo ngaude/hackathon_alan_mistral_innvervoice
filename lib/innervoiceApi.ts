@@ -4,8 +4,7 @@ import { getInnervoiceApiSecret, getInnervoiceApiUrl } from './env';
 import { readInnervoiceErrorMessage } from './innervoiceApiErrors';
 
 export type ClientEvent =
-  | { type: 'ANCHOR_SUBMIT'; mood: number; transcript: string }
-  | { type: 'EXPLORATION_MESSAGE'; text: string; mood0to10?: number }
+  | { type: 'SHARING_MESSAGE'; text: string; mood0to10?: number }
   | { type: 'ANALYSIS_MESSAGE'; text: string; mood0to10?: number }
   | { type: 'START_INNERVOICE'; consent?: boolean }
   | {

@@ -375,11 +375,9 @@ app.post('/api/sessions/:id/event', async (req, res) => {
     type: event.type,
     phaseBefore: s.phase,
     payload:
-      event.type === 'ANCHOR_SUBMIT'
-        ? { mood: event.mood, transcriptChars: event.transcript?.length ?? 0 }
-        : event.type === 'EXPLORATION_MESSAGE'
-          ? { textChars: event.text?.length ?? 0, mood: event.mood0to10 }
-          : event.type === 'ANALYSIS_MESSAGE'
+      event.type === 'SHARING_MESSAGE'
+        ? { textChars: event.text?.length ?? 0, mood: event.mood0to10 }
+        : event.type === 'ANALYSIS_MESSAGE'
           ? { textChars: event.text?.length ?? 0, mood: event.mood0to10 }
           : event.type === 'START_INNERVOICE'
             ? { consent: event.consent }

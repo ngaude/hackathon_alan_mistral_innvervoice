@@ -76,7 +76,7 @@ export default function VoiceCaptureScreen() {
       /* voix clonée optionnelle — repli ref_audio / voix neutre */
     }
     setOnboardingDone(true);
-    setPhase('ANCHORING');
+    setPhase('SHARING');
     hapticSuccess();
     router.back();
   }
@@ -162,7 +162,7 @@ export default function VoiceCaptureScreen() {
         onPress={() => {
           hapticLight();
           setOnboardingDone(true);
-          setPhase('ANCHORING');
+          setPhase('SHARING');
           router.back();
         }}
         disabled={busy}
