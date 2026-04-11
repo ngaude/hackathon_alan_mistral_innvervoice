@@ -44,6 +44,7 @@ export type ClientEvent =
   | { type: 'EXPLORATION_MESSAGE'; text: string; mood0to10?: number }
   | { type: 'ANALYSIS_MESSAGE'; text: string; mood0to10?: number }
   | { type: 'START_INNERVOICE'; consent?: boolean }
+  | { type: 'COMPLETE_INNERVOICE' }
   | {
       type: 'FEEDBACK_SUBMIT';
       wRepli?: number;
@@ -135,6 +136,9 @@ export async function applyEvent(
   }
   if (event.type === 'START_INNERVOICE') {
     return handleStartInnervoice(state, event.consent ?? true);
+  }
+  if (event.type === 'COMPLETE_INNERVOICE') {
+    return handleCompleteInnervoice(state);
   }
   if (event.type === 'FEEDBACK_SUBMIT') {
     return handleFeedback(state, event);
@@ -480,12 +484,24 @@ async function handleStartInnervoice(
   return {
     state: {
       ...state,
-      phase: 'FEEDBACK',
+      phase: 'INNERVOICE',
       voiceMode: 'AGENT',
       consentInnervoice: true,
       innervoiceScript: script,
     },
     audio,
+  };
+}
+
+async function handleCompleteInnervoice(
+  state: SessionSnapshot
+): Promise<{ state: SessionSnapshot; audio: AudioPart[] }> {
+  if (state.phase !== 'INNERVOICE') {
+    throw new Error('Invalid phase for COMPLETE_INNERVOICE');
+  }
+  return {
+    state: { ...state, phase: 'FEEDBACK' },
+    audio: [],
   };
 }
 

@@ -253,7 +253,7 @@ app.post('/api/convert-ref-audio', async (req, res) => {
   }
 });
 
-app.post('/api/sessions', (req, res) => {
+app.post('/api/sessions', async (req, res) => {
   const userId = typeof req.body?.userId === 'string' ? req.body.userId.trim() : '';
   if (!userId) {
     res.status(400).json({ error: 'userId requis' });
@@ -282,7 +282,18 @@ app.post('/api/sessions', (req, res) => {
     voiceProfileB64Chars: b64Len(voiceProfileBase64 ?? undefined),
     hasMistralVoiceId: Boolean(userMistralVoiceId),
   });
-  res.json({ sessionId: id, state });
+
+  const anchorWelcome = "What's been on your mind lately?";
+  let welcomeAudio: { base64: string; spokenText: string } | null = null;
+  try {
+    const { synthesizeWithAgentVoice } = await import('./speechProvider.js');
+    const b64 = await synthesizeWithAgentVoice(anchorWelcome);
+    welcomeAudio = { base64: b64, spokenText: anchorWelcome };
+  } catch (e) {
+    logWarn('welcomeAudio TTS failed', { error: e instanceof Error ? e.message : String(e) });
+  }
+
+  res.json({ sessionId: id, state, welcomeAudio });
 });
 
 app.patch('/api/sessions/:id/voice', (req, res) => {
