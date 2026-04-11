@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="slides-format" content="viewport">
+    <title>InnerVoice — Alan Hackathon Pitch</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Manrope:wght@300..800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+        @theme {
+            --color-bg: #f5f6ff;
+            --color-bg-deep: #eef0ff;
+            --color-surface: #ffffff;
+            --color-text: #1a1a2e;
+            --color-text-secondary: #3d3d6b;
+            --color-text-muted: #6b6b8a;
+            --color-accent-1: #5b5bd6;
+            --color-accent-2: #8b8bf0;
+            --color-accent-3: #3db07d;
+            --color-glass-bg: rgba(255,255,255,0.82);
+            --color-glass-border: rgba(91,91,214,0.12);
+            --color-vignette: rgba(91,91,214,0.04);
+            --font-display: "DM Serif Display", serif;
+            --font-body: "Manrope", sans-serif;
+        }
+    </style>
+    <style>
+        :root { --color-bg: #f5f6ff; --color-text: #1a1a2e; --glow-color-rgb: 91,91,214; }
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { background: var(--color-bg); margin: 0; }
+        body { font-family: "Manrope", sans-serif; color: var(--color-text); overflow: hidden; height: 100vh; width: 100vw; }
+        .deck { width: 100vw; height: 100vh; position: relative; }
+        .slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--color-bg); display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transform: scale(0.97); transition: opacity 0.6s ease, transform 0.6s ease; pointer-events: none; overflow: hidden; }
+        .slide.active { opacity: 1; transform: scale(1); pointer-events: all; }
+        .slide > .content { position: relative; z-index: 2; width: 100%; max-width: 1080px; padding: clamp(1.5rem, 3.5vw, 3.5rem); }
+        .nav-controls { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; z-index: 100; background: rgba(255,255,255,0.88); backdrop-filter: blur(12px); padding: 8px 20px; border-radius: 40px; border: 1px solid rgba(91,91,214,0.15); box-shadow: 0 4px 16px rgba(91,91,214,0.10); }
+        .nav-btn { width: 36px; height: 36px; border: none; background: rgba(91,91,214,0.08); color: #5b5bd6; border-radius: 50%; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+        .nav-btn:hover { background: rgba(91,91,214,0.18); }
+        .slide-dots { display: flex; gap: 7px; }
+        .slide-dots .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(91,91,214,0.18); cursor: pointer; transition: background 0.3s, transform 0.3s; }
+        .slide-dots .dot.active { background: #5b5bd6; transform: scale(1.35); }
+        .slide-counter { font-size: 0.75rem; color: #6b6b8a; min-width: 36px; text-align: center; font-family: Manrope; }
+        .reveal { opacity: 0; transform: translateY(18px); }
+        .gradient-mesh { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+        .blob { position: absolute; border-radius: 50%; filter: blur(80px); }
+        @keyframes float-slow { 0%{transform:translate(0,0) scale(1)} 33%{transform:translate(50px,-40px) scale(1.1)} 66%{transform:translate(-30px,35px) scale(0.92)} 100%{transform:translate(0,0) scale(1)} }
+        @keyframes float-drift { 0%{transform:translate(0,0) scale(1) rotate(0deg)} 33%{transform:translate(-45px,-50px) scale(1.12) rotate(3deg)} 66%{transform:translate(35px,25px) scale(0.9) rotate(-2deg)} 100%{transform:translate(0,0) scale(1) rotate(0deg)} }
+        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+        .blob:nth-child(1){ animation: float-slow 12s ease-in-out infinite; }
+        .blob:nth-child(2){ animation: float-drift 16s ease-in-out infinite; }
+        .blob:nth-child(3){ animation: float-slow 20s ease-in-out infinite reverse; }
+        .slide::after { content:""; position:absolute; inset:0; z-index:1; pointer-events:none; background:radial-gradient(ellipse at center, transparent 55%, rgba(91,91,214,0.04) 100%); }
+        .glass-card { background: rgba(255,255,255,0.82); backdrop-filter: blur(12px); border: 1px solid rgba(91,91,214,0.12); border-radius: 16px; padding: 1.4rem 1.6rem; box-shadow: 0 4px 24px rgba(91,91,214,0.07); transition: transform 0.25s ease, box-shadow 0.25s ease; }
+        .glass-card:hover { transform: translateY(-3px); box-shadow: 0 8px 32px rgba(91,91,214,0.13); }
+        .accent-pill { display: inline-flex; align-items: center; gap: 6px; background: rgba(91,91,214,0.10); color: #5b5bd6; border-radius: 99px; padding: 4px 14px; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+        .green-pill { background: rgba(61,176,125,0.10); color: #3db07d; }
+        .stat-num { font-family: "DM Serif Display", serif; font-size: clamp(2rem,3.5vw,2.8rem); color: #5b5bd6; line-height: 1; }
+        .bar-fill { height: 8px; border-radius: 99px; background: linear-gradient(90deg, #5b5bd6, #8b8bf0); width: 0%; transition: width 0.8s cubic-bezier(0.16,1,0.3,1); }
+        .bar-track { background: rgba(91,91,214,0.10); border-radius: 99px; height: 8px; overflow: hidden; flex: 1; }
+        .timer-badge { position: absolute; top: 28px; right: 32px; z-index: 10; background: rgba(255,255,255,0.88); border: 1px solid rgba(91,91,214,0.15); border-radius: 99px; padding: 5px 14px; font-size: 0.75rem; color: #5b5bd6; font-weight: 600; font-family: Manrope; }
+        .logo-hero { animation: float 3s ease-in-out infinite; width: clamp(90px,12vw,130px); margin: 0 auto 1.4rem; display: block; border-radius: 24px; box-shadow: 0 8px 32px rgba(91,91,214,0.18); }
+    </style>
+</head>
+<body>
+<div class="mouse-spotlight" style="position:fixed;inset:0;z-index:99;pointer-events:none;"></div>
+<div class="deck">
+
+<!-- SLIDE 1: TITLE -->
+<div class="slide active" data-slide="1">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:520px;height:520px;top:-140px;right:-100px;background:#5b5bd6;opacity:0.12;"></div>
+        <div class="blob" style="width:320px;height:320px;bottom:-80px;left:-60px;background:#8b8bf0;opacity:0.10;"></div>
+        <div class="blob" style="width:200px;height:200px;top:42%;left:12%;background:#3db07d;opacity:0.07;"></div>
+    </div>
+    <canvas class="particle-canvas" style="position:absolute;inset:0;z-index:1;"></canvas>
+    <div class="content text-center">
+        <img class="logo-hero reveal" src="https://user-gen-media-assets.s3.amazonaws.com/gemini_images/1321cd32-94b4-47ca-8bb2-cf09f73640e5.png" alt="InnerVoice logo">
+        <div class="reveal" style="font-size:clamp(3.2rem,7.5vw,6rem);font-family:'DM Serif Display',serif;font-weight:400;line-height:1.05;background:linear-gradient(135deg,#5b5bd6,#8b8bf0,#3db07d);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:1rem;">
+            InnerVoice
+        </div>
+        <p class="reveal" style="font-size:clamp(1rem,1.8vw,1.25rem);color:#3d3d6b;font-weight:400;letter-spacing:0.04em;max-width:500px;margin:0 auto 2rem;">
+            Your AI-powered inner voice for mental wellness
+        </p>
+        <div class="reveal" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+            <span class="accent-pill">Voice AI</span>
+            <span class="accent-pill">Mental Health</span>
+            <span class="accent-pill green-pill">Prevention-first</span>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 2: THE PROBLEM -->
+<div class="slide" data-slide="2">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:380px;height:380px;top:-80px;right:-80px;background:#5b5bd6;opacity:0.08;"></div>
+        <div class="blob" style="width:260px;height:260px;bottom:-60px;left:-40px;background:#8b8bf0;opacity:0.07;"></div>
+    </div>
+    <div class="timer-badge">⏱ 0:30</div>
+    <div class="content">
+        <div class="reveal" style="margin-bottom:0.75rem;"><span class="accent-pill">The Problem</span></div>
+        <h2 class="reveal" style="font-family:'DM Serif Display',serif;font-size:clamp(1.9rem,3.5vw,2.8rem);color:#1a1a2e;line-height:1.2;margin-bottom:1.8rem;">Mental health crises are silently escalating — and <em>underserved</em></h2>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:18px;">
+            <div class="glass-card reveal">
+                <div class="stat-num">1 in 4</div>
+                <p style="font-size:0.84rem;color:#3d3d6b;margin-top:8px;font-weight:500;">people face a mental health issue each year in France</p>
+            </div>
+            <div class="glass-card reveal">
+                <div class="stat-num">8 mo.</div>
+                <p style="font-size:0.84rem;color:#3d3d6b;margin-top:8px;font-weight:500;">average wait time for a first psychiatrist appointment</p>
+            </div>
+            <div class="glass-card reveal">
+                <div class="stat-num">€147B</div>
+                <p style="font-size:0.84rem;color:#3d3d6b;margin-top:8px;font-weight:500;">annual economic cost of mental illness in Europe</p>
+            </div>
+        </div>
+        <div class="glass-card reveal" style="display:flex;align-items:center;gap:16px;border-left:4px solid #5b5bd6;">
+            <span style="font-size:1.6rem;">💬</span>
+            <p style="font-size:0.95rem;color:#1a1a2e;font-weight:500;margin:0;">Positive self-talk is clinically proven to reduce anxiety — yet <strong>no accessible, personalized tool</strong> exists at scale.</p>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 3: THE SOLUTION -->
+<div class="slide" data-slide="3">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:400px;height:400px;top:-100px;left:-80px;background:#5b5bd6;opacity:0.09;"></div>
+        <div class="blob" style="width:280px;height:280px;bottom:-60px;right:-60px;background:#3db07d;opacity:0.08;"></div>
+    </div>
+    <div class="timer-badge">⏱ 1:15</div>
+    <div class="content">
+        <div class="reveal" style="margin-bottom:0.75rem;"><span class="accent-pill">Our Solution</span></div>
+        <h2 class="reveal" style="font-family:'DM Serif Display',serif;font-size:clamp(1.8rem,3vw,2.5rem);color:#1a1a2e;line-height:1.2;margin-bottom:1.6rem;">InnerVoice clones your voice to coach you — <em>as yourself</em></h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="glass-card reveal" style="border-top:3px solid #5b5bd6;">
+                <div style="font-size:1.8rem;margin-bottom:8px;">🎙️</div>
+                <h4 style="font-weight:700;color:#1a1a2e;margin:0 0 5px;font-size:0.95rem;">Voice Cloning</h4>
+                <p style="font-size:0.82rem;color:#3d3d6b;margin:0;">Records your voice once. Delivers AI-generated self-affirmations in <em>your own voice</em> — proven more effective than any generic alternative.</p>
+            </div>
+            <div class="glass-card reveal" style="border-top:3px solid #8b8bf0;">
+                <div style="font-size:1.8rem;margin-bottom:8px;">🧠</div>
+                <h4 style="font-weight:700;color:#1a1a2e;margin:0 0 5px;font-size:0.95rem;">LLM-Powered Scripts</h4>
+                <p style="font-size:0.82rem;color:#3d3d6b;margin:0;">Context-aware affirmations grounded in CBT & positive psychology — personalized to your mood and stressors via a daily check-in.</p>
+            </div>
+            <div class="glass-card reveal" style="border-top:3px solid #3db07d;">
+                <div style="font-size:1.8rem;margin-bottom:8px;">📊</div>
+                <h4 style="font-weight:700;color:#1a1a2e;margin:0 0 5px;font-size:0.95rem;">Emotion Analytics</h4>
+                <p style="font-size:0.82rem;color:#3d3d6b;margin:0;">Tracks emotional patterns over time. Alerts Alan care coordinators — with consent — for proactive support before crises escalate.</p>
+            </div>
+            <div class="glass-card reveal" style="border-top:3px solid #f5a623;">
+                <div style="font-size:1.8rem;margin-bottom:8px;">🔒</div>
+                <h4 style="font-weight:700;color:#1a1a2e;margin:0 0 5px;font-size:0.95rem;">Privacy-First</h4>
+                <p style="font-size:0.82rem;color:#3d3d6b;margin:0;">All voice data processed on-device. Fully GDPR compliant. Users control every bit of their voice profile and data sharing.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 4: BUSINESS POTENTIAL -->
+<div class="slide" data-slide="4">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:400px;height:400px;top:-100px;right:-80px;background:#5b5bd6;opacity:0.10;"></div>
+        <div class="blob" style="width:260px;height:260px;bottom:-50px;left:-50px;background:#3db07d;opacity:0.08;"></div>
+    </div>
+    <div class="timer-badge">⏱ 3:00</div>
+    <div class="content">
+        <div class="reveal" style="margin-bottom:0.75rem;"><span class="accent-pill">Business Potential</span></div>
+        <h2 class="reveal" style="font-family:'DM Serif Display',serif;font-size:clamp(1.8rem,3vw,2.5rem);color:#1a1a2e;line-height:1.2;margin-bottom:1.5rem;">A natural extension of Alan's prevention mission</h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div style="display:flex;flex-direction:column;gap:14px;">
+                <div class="glass-card reveal" style="border-left:3px solid #5b5bd6;">
+                    <h4 style="font-weight:700;font-size:0.9rem;margin:0 0 5px;color:#1a1a2e;">📌 B2B — Alan Enterprise</h4>
+                    <p style="font-size:0.8rem;color:#3d3d6b;margin:0;">White-label InnerVoice in Alan's employer health plans. Mental wellness benefit for 500k+ covered employees. Premium tier add-on.</p>
+                </div>
+                <div class="glass-card reveal" style="border-left:3px solid #8b8bf0;">
+                    <h4 style="font-weight:700;font-size:0.9rem;margin:0 0 5px;color:#1a1a2e;">📌 B2C — Alan App</h4>
+                    <p style="font-size:0.8rem;color:#3d3d6b;margin:0;">Native feature inside Alan's 4M+ user app. Zero CAC — leverages existing health data consent and user trust.</p>
+                </div>
+                <div class="glass-card reveal" style="border-left:3px solid #3db07d;">
+                    <h4 style="font-weight:700;font-size:0.9rem;margin:0 0 5px;color:#1a1a2e;">💰 Monetisation</h4>
+                    <p style="font-size:0.8rem;color:#3d3d6b;margin:0;">€4.99/mo B2C · €2/user/mo B2B · API licensing to other European insurers</p>
+                </div>
+            </div>
+            <div class="glass-card reveal" style="display:flex;flex-direction:column;justify-content:space-between;">
+                <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:.07em;color:#6b6b8a;font-weight:600;margin-bottom:14px;">Market sizing</div>
+                <div style="display:flex;flex-direction:column;gap:14px;flex:1;justify-content:center;">
+                    <div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:0.82rem;font-weight:600;color:#1a1a2e;">Digital mental health SOM <span style="color:#5b5bd6;">€320M</span></div>
+                        <div class="bar-track"><div class="bar-fill" data-width="32"></div></div>
+                    </div>
+                    <div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:0.82rem;font-weight:600;color:#1a1a2e;">SAM (FR + BE + ES) <span style="color:#8b8bf0;">€1.8B</span></div>
+                        <div class="bar-track"><div class="bar-fill" data-width="55"></div></div>
+                    </div>
+                    <div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:0.82rem;font-weight:600;color:#1a1a2e;">TAM European mental health <span style="color:#3db07d;">€14B</span></div>
+                        <div class="bar-track"><div class="bar-fill" data-width="85"></div></div>
+                    </div>
+                </div>
+                <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(91,91,214,0.10);">
+                    <p style="font-size:0.75rem;color:#6b6b8a;margin:0;">3 research papers · Working prototype · Pilot-ready in 30 days</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 5: CLOSING -->
+<div class="slide" data-slide="5">
+    <div class="gradient-mesh">
+        <div class="blob" style="width:500px;height:500px;top:-130px;right:-100px;background:#5b5bd6;opacity:0.13;"></div>
+        <div class="blob" style="width:320px;height:320px;bottom:-80px;left:-60px;background:#3db07d;opacity:0.10;"></div>
+        <div class="blob" style="width:220px;height:220px;top:35%;left:10%;background:#8b8bf0;opacity:0.08;"></div>
+    </div>
+    <canvas class="particle-canvas" style="position:absolute;inset:0;z-index:1;"></canvas>
+    <div class="content text-center">
+        <img class="logo-hero reveal" src="https://user-gen-media-assets.s3.amazonaws.com/gemini_images/1321cd32-94b4-47ca-8bb2-cf09f73640e5.png" alt="InnerVoice logo" style="width:80px;margin-bottom:1rem;">
+        <div class="reveal" style="margin-bottom:1rem;"><span class="accent-pill">The Ask</span></div>
+        <h2 class="reveal" style="font-family:'DM Serif Display',serif;font-size:clamp(2rem,4vw,3.2rem);color:#1a1a2e;line-height:1.15;margin-bottom:1.2rem;">
+            Give everyone access to their <br><span style="background:linear-gradient(135deg,#5b5bd6,#8b8bf0,#3db07d);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">most powerful coach</span><br>— themselves.
+        </h2>
+        <p class="reveal" style="font-size:0.95rem;color:#3d3d6b;max-width:500px;margin:0 auto 2rem;font-weight:400;">InnerVoice turns Alan's prevention promise into a daily habit. Clinically backed, technically feasible, strategically aligned.</p>
+        <div class="reveal" style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
+            <div class="glass-card" style="text-align:center;min-width:130px;padding:1rem 1.2rem;">
+                <div style="font-size:1.4rem;">📄</div>
+                <p style="font-size:0.78rem;font-weight:600;color:#1a1a2e;margin:5px 0 0;">3 Research Papers</p>
+            </div>
+            <div class="glass-card" style="text-align:center;min-width:130px;padding:1rem 1.2rem;">
+                <div style="font-size:1.4rem;">🛠️</div>
+                <p style="font-size:0.78rem;font-weight:600;color:#1a1a2e;margin:5px 0 0;">Working Prototype</p>
+            </div>
+            <div class="glass-card" style="text-align:center;min-width:130px;padding:1rem 1.2rem;">
+                <div style="font-size:1.4rem;">🚀</div>
+                <p style="font-size:0.78rem;font-weight:600;color:#1a1a2e;margin:5px 0 0;">Pilot-ready in 30 days</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<div class="nav-controls">
+    <button class="nav-btn" onclick="changeSlide(-1)">&#8249;</button>
+    <div class="slide-dots" id="dots"></div>
+    <button class="nav-btn" onclick="changeSlide(1)">&#8250;</button>
+    <span class="slide-counter" id="counter">1 / 5</span>
+</div>
+
+<script>
+let current = 1;
+const total = document.querySelectorAll('.slide').length;
+const dotsContainer = document.getElementById('dots');
+const counter = document.getElementById('counter');
+for (let i = 1; i <= total; i++) { const dot = document.createElement('div'); dot.className = 'dot' + (i === 1 ? ' active' : ''); dot.onclick = () => goToSlide(i); dotsContainer.appendChild(dot); }
+function goToSlide(n) {
+    const prev = document.querySelector('.slide.active');
+    const next = document.querySelector('.slide[data-slide="' + n + '"]');
+    if (prev) prev.classList.remove('active');
+    if (next) { next.classList.add('active'); animateSlide(next); }
+    current = n; updateNav();
+}
+function changeSlide(dir) { let next = current + dir; if (next < 1) next = total; if (next > total) next = 1; goToSlide(next); }
+function updateNav() { document.querySelectorAll('.dot').forEach((d, i) => { d.classList.toggle('active', i + 1 === current); }); counter.textContent = current + ' / ' + total; }
+document.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); changeSlide(1); } if (e.key === 'ArrowLeft') { e.preventDefault(); changeSlide(-1); } });
+let touchStartX = 0;
+document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+document.addEventListener('touchend', (e) => { const diff = touchStartX - e.changedTouches[0].clientX; if (Math.abs(diff) > 50) changeSlide(diff > 0 ? 1 : -1); });
+function animateSlide(slide) {
+    slide.querySelectorAll('.reveal').forEach((el, i) => {
+        el.style.transition = 'none'; el.style.opacity = '0'; el.style.transform = 'translateY(18px)'; el.offsetHeight;
+        const delay = i * 0.08;
+        el.style.transition = 'opacity 0.35s ease ' + delay + 's, transform 0.35s ease ' + delay + 's';
+        el.style.opacity = '1'; el.style.transform = 'translateY(0)';
+    });
+    slide.querySelectorAll('.bar-fill:not(.fill-init)').forEach((bar, i) => {
+        bar.classList.add('fill-init');
+        bar.style.width = '0%'; bar.style.transition = 'width 0.7s ease ' + (i * 0.1 + 0.3) + 's';
+        bar.offsetHeight; bar.style.width = bar.dataset.width + '%';
+    });
+}
+document.addEventListener('mousemove', (e) => {
+    const s = document.querySelector('.mouse-spotlight');
+    if (s) s.style.background = 'radial-gradient(600px circle at ' + e.clientX + 'px ' + e.clientY + 'px, rgba(91,91,214,0.05), transparent 40%)';
+});
+window.initParticles = function(canvas, options) {
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d'); canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+    const count = options.count || 40;
+    const particles = Array.from({ length: count }, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3, size: Math.random() * 2 + 0.8, alpha: Math.random() * 0.22 + 0.07 }));
+    (function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(p => { p.x += p.vx; p.y += p.vy; if (p.x < 0) p.x = canvas.width; if (p.x > canvas.width) p.x = 0; if (p.y < 0) p.y = canvas.height; if (p.y > canvas.height) p.y = 0; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fillStyle = 'rgba(91,91,214,' + p.alpha + ')'; ctx.fill(); });
+        requestAnimationFrame(animate);
+    })();
+};
+document.querySelectorAll('.particle-canvas').forEach(c => window.initParticles(c, { count: 45 }));
+try { animateSlide(document.querySelector('.slide.active')); } catch(e) {}
+</script>
+</body>
+</html>
