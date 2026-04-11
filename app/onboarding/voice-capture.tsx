@@ -1,79 +1,35 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { theme } from '../../constants/theme';
+import {
+  VOICE_CLONE_CALIBRATION_PHRASE,
+  VOICE_CLONE_INSTRUCTION,
+  VOICE_CLONE_TIMING_HINT,
+} from '../../constants/voiceClonePhrase';
 import { useVoiceProfileRecorder } from '../../hooks/useVoiceProfileRecorder';
+import { commitVoiceProfileSample } from '../../lib/commitVoiceProfileSample';
 import { hapticHeavy, hapticLight, hapticMedium, hapticSuccess, hapticWarning } from '../../lib/haptics';
 import { pickMistralCompatibleAudioBase64 } from '../../lib/audioCompat';
-import { tryConvertCompressedFileToWavBase64 } from '../../lib/convertCompressedAudioToWavBase64';
-import { getInnervoiceApiUrl } from '../../lib/env';
-import { cloneVoiceOnServer } from '../../lib/innervoiceApi';
-import { describeMistralAudioBase64 } from '../../lib/refAudio';
-import { tryConvertM4aBase64ToWavViaHttp } from '../../lib/refAudioRemoteConvert';
-import { getOrCreateUserId } from '../../lib/userIdentity';
 import { useSessionStore } from '../../store/sessionStore';
 
 const COVER = require('../../assets/innervoice-logo.png');
 
-const PHRASE =
-  'Right now, I feel at peace with who I am and what I live day to day.';
-
 export default function VoiceCaptureScreen() {
   const router = useRouter();
   const { start, stop, isRecording } = useVoiceProfileRecorder();
-  const setVoiceProfile = useSessionStore((s) => s.setVoiceProfile);
   const setOnboardingDone = useSessionStore((s) => s.setOnboardingDone);
   const setPhase = useSessionStore((s) => s.setPhase);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function finishWithBase64(outBase64: string, sourceUri?: string | null) {
-    let b64 = outBase64;
-    let fmt = describeMistralAudioBase64(b64);
-    if (fmt.kind === 'mp4_m4a' && sourceUri) {
-      const converted = await tryConvertCompressedFileToWavBase64(sourceUri);
-      if (converted) {
-        b64 = converted;
-        fmt = describeMistralAudioBase64(b64);
-      }
-    }
-    if (fmt.kind === 'mp4_m4a') {
-      const remote = await tryConvertM4aBase64ToWavViaHttp(b64);
-      if (remote) {
-        b64 = remote;
-        fmt = describeMistralAudioBase64(b64);
-      }
-    }
-    if (fmt.kind === 'mp4_m4a') {
-      setErr(
-        Platform.OS === 'android'
-          ? 'M4A/MP4 is not accepted by Mistral. Options: set EXPO_PUBLIC_REF_AUDIO_CONVERT_URL (remote conversion, Expo Go), import WAV/MP3, or use a development build with local conversion.'
-          : 'Audio format not compatible (M4A). Try again, import WAV/MP3, or set EXPO_PUBLIC_REF_AUDIO_CONVERT_URL.'
-      );
+    const r = await commitVoiceProfileSample(outBase64, sourceUri);
+    if (!r.ok) {
+      setErr(r.message);
       hapticWarning();
       return;
-    }
-    if (fmt.kind !== 'wav' && fmt.kind !== 'mp3') {
-      setErr('Unrecognized audio format. Use WAV or MP3.');
-      hapticWarning();
-      return;
-    }
-    if (!getInnervoiceApiUrl()) {
-      setErr(
-        'The InnerVoice server is required to store your voice print (Mistral API side).'
-      );
-      hapticWarning();
-      return;
-    }
-    setVoiceProfile(b64);
-    try {
-      const ext = fmt.kind === 'mp3' ? 'voice.mp3' : 'voice.wav';
-      const uid = await getOrCreateUserId();
-      const { mistralVoiceId } = await cloneVoiceOnServer(uid, b64, ext);
-      useSessionStore.getState().setUserMistralVoiceId(mistralVoiceId);
-    } catch {
-      /* voix clonée optionnelle — repli ref_audio / voix neutre */
     }
     setOnboardingDone(true);
     setPhase('ANCHORING');
@@ -129,9 +85,9 @@ export default function VoiceCaptureScreen() {
     <View style={styles.wrap}>
       <Image source={COVER} style={styles.hero} resizeMode="contain" />
       <Text style={styles.title}>Voice print (calm)</Text>
-      <Text style={styles.instruction}>Read the following phrase calmly.</Text>
-      <Text style={styles.phrase}>{PHRASE}</Text>
-      <Text style={styles.hint}>About 5–10 seconds, in a quiet place.</Text>
+      <Text style={styles.instruction}>{VOICE_CLONE_INSTRUCTION}</Text>
+      <Text style={styles.phrase}>{VOICE_CLONE_CALIBRATION_PHRASE}</Text>
+      <Text style={styles.hint}>{VOICE_CLONE_TIMING_HINT}</Text>
       <Pressable
         onPress={onToggle}
         disabled={busy}

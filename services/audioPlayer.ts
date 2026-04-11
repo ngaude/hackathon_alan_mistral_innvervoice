@@ -2,6 +2,7 @@ import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import type { AudioPlayer } from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
 
+import { describeMistralAudioBase64 } from '../lib/refAudio';
 import { usePlaybackUiStore } from '../store/playbackUiStore';
 
 interface PlayMp3Options {
@@ -49,6 +50,66 @@ export async function skipCurrentPlayback(): Promise<void> {
     /* ignore */
   }
   h.finish();
+}
+
+/** Lecture d’un échantillon brut (WAV ou MP3) depuis du base64 — ex. empreinte vocale locale. */
+export async function playVoiceSampleBase64(base64: string, opts?: PlayMp3Options): Promise<void> {
+  const fmt = describeMistralAudioBase64(base64);
+  if (fmt.kind !== 'wav' && fmt.kind !== 'mp3') {
+    throw new Error('Sample format not playable (need WAV or MP3).');
+  }
+  const ext = fmt.kind === 'mp3' ? 'mp3' : 'wav';
+  await skipCurrentPlayback();
+  await setAudioModeAsync({
+    playsInSilentMode: true,
+    allowsRecording: false,
+    shouldPlayInBackground: false,
+    interruptionMode: 'duckOthers',
+  });
+  const dir = FileSystem.cacheDirectory;
+  if (!dir) throw new Error('cacheDirectory indisponible');
+  const path = `${dir}voice-sample-${Date.now()}.${ext}`;
+  await FileSystem.writeAsStringAsync(path, base64, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  const player = createAudioPlayer({ uri: path }, { updateInterval: 100 });
+  const vol = opts?.volume ?? 1;
+  player.volume = vol;
+
+  const myGen = ++generation;
+  trackBegin();
+
+  const subRef: { current: { remove: () => void } | null } = { current: null };
+  try {
+    await new Promise<void>((resolve) => {
+      let settled = false;
+      const done = () => {
+        if (settled) return;
+        settled = true;
+        if (active?.gen === myGen) {
+          active = null;
+          trackEnd();
+        }
+        resolve();
+      };
+      subRef.current = player.addListener('playbackStatusUpdate', (st) => {
+        if (st.didJustFinish) done();
+      }) as { remove: () => void };
+      active = { gen: myGen, player, subscription: subRef.current, finish: done };
+      player.play();
+    });
+  } finally {
+    try {
+      subRef.current?.remove();
+    } catch {
+      /* ignore */
+    }
+    try {
+      player.remove();
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 export async function playMp3Base64(base64: string, opts?: PlayMp3Options): Promise<void> {
