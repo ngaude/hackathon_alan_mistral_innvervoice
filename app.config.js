@@ -93,6 +93,7 @@ module.exports = {
       mistralInnervoiceSimulatedVoiceId: process.env.MISTRAL_INNERVOICE_SIMULATED_VOICE_ID ?? 'gb_jane_neutral',
       mistralTtsModel: process.env.MISTRAL_TTS_MODEL ?? '',
       mistralSttModel: process.env.MISTRAL_STT_MODEL ?? '',
+      mistralChatModel: process.env.MISTRAL_CHAT_MODEL ?? '',
       elevenlabsApiKey: process.env.ELEVENLABS_API_KEY ?? '',
       elevenlabsModelId: process.env.ELEVENLABS_MODEL_ID ?? 'eleven_multilingual_v2',
       elevenlabsAgentVoiceId: process.env.ELEVENLABS_AGENT_VOICE_ID ?? '',

@@ -1,5 +1,5 @@
 import { EXPLORATION_FOLLOWUP_SYSTEM, EXPLORATION_OPENING_SYSTEM } from './prompts.js';
-import { MISTRAL_CHAT_MODEL } from './voiceParams.js';
+import { getMistralChatModel } from './voiceParams.js';
 import { sanitizeSpokenText } from './sanitizeSpokenText.js';
 import type { EmotionalState } from './sessionTypes.js';
 import { mistralPostJson } from './mistralClient.js';
@@ -18,7 +18,7 @@ export async function generateExplorationOpening(params: {
   const content = await mistralPostJson<{
     choices: { message: { content: string } }[];
   }>('/chat/completions', {
-    model: MISTRAL_CHAT_MODEL,
+    model: getMistralChatModel(),
     messages: [
       { role: 'system', content: EXPLORATION_OPENING_SYSTEM },
       {
@@ -55,7 +55,7 @@ export async function generateExplorationFollowUp(params: {
   const content = await mistralPostJson<{
     choices: { message: { content: string } }[];
   }>('/chat/completions', {
-    model: MISTRAL_CHAT_MODEL,
+    model: getMistralChatModel(),
     messages: [
       { role: 'system', content: EXPLORATION_FOLLOWUP_SYSTEM },
       {

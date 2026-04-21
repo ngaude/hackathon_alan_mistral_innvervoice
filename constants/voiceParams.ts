@@ -1,6 +1,7 @@
 export const INNERVOICE_PAUSE_MS_BETWEEN_SEGMENTS = 1500;
 
-export const MISTRAL_CHAT_MODEL = 'mistral-large-latest';
+/** Default when `MISTRAL_CHAT_MODEL` is unset (see `getMistralChatModel` in `lib/env.ts`). */
+export const MISTRAL_CHAT_MODEL_DEFAULT = 'mistral-large-latest';
 
 /**
  * Neutral agent voice (Voxtral API slug). Short alias `marie` in env is mapped to this slug in `lib/env.ts`.

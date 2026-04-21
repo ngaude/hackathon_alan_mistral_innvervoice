@@ -1,5 +1,5 @@
 import { AGENT_REPLY_SYSTEM } from '../constants/prompts';
-import { MISTRAL_CHAT_MODEL } from '../constants/voiceParams';
+import { getMistralChatModel } from '../lib/env';
 import { sanitizeSpokenText } from '../lib/sanitizeSpokenText';
 import type { Phase } from '../types/session';
 import { mistralPostJson } from './mistralClient';
@@ -24,7 +24,7 @@ export async function generateAgentReply(params: {
   const content = await mistralPostJson<{
     choices: { message: { content: string } }[];
   }>('/chat/completions', {
-    model: MISTRAL_CHAT_MODEL,
+    model: getMistralChatModel(),
     messages: [
       { role: 'system', content: system },
       {

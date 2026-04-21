@@ -1,6 +1,10 @@
 import Constants from 'expo-constants';
 
-import { MISTRAL_AGENT_NEUTRAL_VOICE_SLUG, MISTRAL_INNERVOICE_SIMULATED_VOICE_ID } from '../constants/voiceParams';
+import {
+  MISTRAL_AGENT_NEUTRAL_VOICE_SLUG,
+  MISTRAL_CHAT_MODEL_DEFAULT,
+  MISTRAL_INNERVOICE_SIMULATED_VOICE_ID,
+} from '../constants/voiceParams';
 
 export type VoiceProviderType = 'mistral' | 'elevenlabs';
 
@@ -74,6 +78,16 @@ export function getMistralSttModel(): string {
   const m = Constants.expoConfig?.extra?.mistralSttModel as string | undefined;
   const t = m?.trim();
   return t || 'voxtral-mini-latest';
+}
+
+export function getMistralChatModel(): string {
+  const fromExpo = (Constants.expoConfig?.extra?.mistralChatModel as string | undefined)?.trim();
+  if (fromExpo) return fromExpo;
+  const fromProcess =
+    typeof process !== 'undefined' && typeof process.env?.MISTRAL_CHAT_MODEL === 'string'
+      ? process.env.MISTRAL_CHAT_MODEL.trim()
+      : '';
+  return fromProcess || MISTRAL_CHAT_MODEL_DEFAULT;
 }
 
 export function getInnervoiceApiUrl(): string | undefined {

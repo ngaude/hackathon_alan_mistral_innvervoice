@@ -1,5 +1,5 @@
 import { innervoiceReplayPrompt } from './prompts.js';
-import { MISTRAL_CHAT_MODEL } from './voiceParams.js';
+import { getMistralChatModel } from './voiceParams.js';
 import { sanitizeSpokenText } from './sanitizeSpokenText.js';
 import type { EmotionalState, InnervoiceScript, SessionContext } from './sessionTypes.js';
 import { validateInnervoiceScript } from './innervoiceValidation.js';
@@ -22,7 +22,7 @@ export async function generateInnervoiceScript(
   const content = await mistralPostJson<{
     choices: { message: { content: string } }[];
   }>('/chat/completions', {
-    model: MISTRAL_CHAT_MODEL,
+    model: getMistralChatModel(),
     messages: [{ role: 'user', content: prompt }],
     response_format: { type: 'json_object' },
     temperature: 0.5,

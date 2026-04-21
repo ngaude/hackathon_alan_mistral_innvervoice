@@ -1,5 +1,5 @@
 import { innervoiceNudgePrompt } from './prompts.js';
-import { MISTRAL_CHAT_MODEL } from './voiceParams.js';
+import { getMistralChatModel } from './voiceParams.js';
 import { sanitizeSpokenText } from './sanitizeSpokenText.js';
 import { COGNITIVE_DISTORTION_LABELS, type CognitiveDistortionId } from './cognitiveDistortions.js';
 import { mistralPostJson } from './mistralClient.js';
@@ -18,7 +18,7 @@ export async function generateInnervoiceNudgeText(params: {
     const content = await mistralPostJson<{
       choices: { message: { content: string } }[];
     }>('/chat/completions', {
-      model: MISTRAL_CHAT_MODEL,
+      model: getMistralChatModel(),
       messages: [{ role: 'user', content: innervoiceNudgePrompt(label, params.summaryHint) }],
       temperature: 0.45,
     });

@@ -1,6 +1,6 @@
 import { formatAnchorMoodNudgeForLLM } from '../constants/anchorMood';
 import { EMOTION_ANALYSIS_SYSTEM } from '../constants/prompts';
-import { MISTRAL_CHAT_MODEL } from '../constants/voiceParams';
+import { getMistralChatModel } from '../lib/env';
 import type { EmotionalState, PrimaryEmotion } from '../types/session';
 import { mistralPostJson } from './mistralClient';
 
@@ -74,7 +74,7 @@ export async function analyzeEmotion(
   const content = await mistralPostJson<{
     choices: { message: { content: string } }[];
   }>('/chat/completions', {
-    model: MISTRAL_CHAT_MODEL,
+    model: getMistralChatModel(),
     messages: [
       { role: 'system', content: EMOTION_ANALYSIS_SYSTEM },
       { role: 'user', content: userContent },

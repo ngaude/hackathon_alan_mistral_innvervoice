@@ -3,7 +3,7 @@ import {
   type CognitiveDistortionId,
   normalizeDistortionId,
 } from './cognitiveDistortions.js';
-import { MISTRAL_CHAT_MODEL } from './voiceParams.js';
+import { getMistralChatModel } from './voiceParams.js';
 import { mistralPostJson } from './mistralClient.js';
 
 export interface BeckTriangleHint {
@@ -51,7 +51,7 @@ export async function classifyCognitiveSession(transcript: string): Promise<Dist
   const content = await mistralPostJson<{
     choices: { message: { content: string } }[];
   }>('/chat/completions', {
-    model: MISTRAL_CHAT_MODEL,
+    model: getMistralChatModel(),
     messages: [
       { role: 'system', content: CLASSIFIER_SYSTEM },
       { role: 'user', content: `Text to analyze:\n${trimmed.slice(0, 8000)}` },
