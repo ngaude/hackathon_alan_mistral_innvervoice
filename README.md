@@ -1,5 +1,15 @@
 # InnerVoice — Prototype Plan
+
+<p align="center">
+<img src="assets/innervoice-logo.png" width="250" />
+</p>
+
 ## Mental-health support via vocal biofeedback and a therapeutic agent
+
+<p align="center">
+  <img src="assets/screen1.jpg" width="250" />
+  <img src="assets/screen2.jpg" width="250" />
+</p>
 
 ---
 
