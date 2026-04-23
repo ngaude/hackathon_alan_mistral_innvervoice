@@ -698,16 +698,6 @@ export default function SessionScreen() {
               >
                 <Text style={styles.btnTextGhost}>Record</Text>
               </Pressable>
-              <Pressable
-                style={({ pressed }) => [styles.btn, styles.btnGhost, pressed && styles.btnPressed]}
-                onPress={() => {
-                  hapticLight();
-                  setOnboardingDone(true);
-                  setPhase('SHARING');
-                }}
-              >
-                <Text style={styles.btnTextGhost}>Neutral voice</Text>
-              </Pressable>
             </View>
           ) : null}
 
